@@ -30,6 +30,7 @@ import androidx.navigation.NavHostController
 import com.example.munchstr.R
 import com.example.munchstr.model.Recipe
 import com.example.munchstr.ui.components.AppCard
+import com.example.munchstr.ui.components.SavedCards
 import com.example.munchstr.ui.screens.home.handleCardClick
 import com.example.munchstr.viewModel.RecipeViewModel
 
@@ -88,7 +89,7 @@ fun Bookmarks(navController: NavHostController, recipeViewModel: RecipeViewModel
                         items = recipes,
                         key = {item: Recipe ->  item.uuid}
                     ){recipe ->
-                        AppCard(recipe = recipe, onClick = {
+                        SavedCards(recipe = recipe, onClick = {
                             handleCardClick(navController, recipe.uuid)
                         })
                     }
