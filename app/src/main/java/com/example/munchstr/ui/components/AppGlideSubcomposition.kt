@@ -17,9 +17,7 @@ import com.example.munchstr.R
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun AppGlideSubcomposition(imageUri: String){
-    Box()
-    {
+fun AppGlideSubcomposition(imageUri: String, modifier: Modifier=Modifier){
         GlideSubcomposition(
             model = imageUri,
         ) {
@@ -27,11 +25,11 @@ fun AppGlideSubcomposition(imageUri: String){
                 RequestState.Failure -> Image(
                     painter = painterResource(id = R.drawable.baseline_warning_amber_24),
                     contentDescription = "placeholder",
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
                 )
 
                 RequestState.Loading ->
-                    Box(modifier = Modifier.matchParentSize()) {
+                    Box(modifier = modifier) {
                         CircularProgressIndicator(
                             modifier = Modifier.align(Alignment.Center),
                             color = MaterialTheme.colorScheme.primary
@@ -43,9 +41,7 @@ fun AppGlideSubcomposition(imageUri: String){
                     contentDescription = null,
                     contentScale = ContentScale.Crop
                 )
-
                 else -> {}
             }
         }
-    }
 }

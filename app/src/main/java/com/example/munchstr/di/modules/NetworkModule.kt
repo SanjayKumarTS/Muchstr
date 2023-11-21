@@ -1,5 +1,6 @@
 package com.example.munchstr.di.modules
 
+import com.example.munchstr.network.AuthApiService
 import com.example.munchstr.network.RecipeApiService
 import dagger.Module
 import dagger.Provides
@@ -49,5 +50,11 @@ object NetworkModule {
     @Singleton
     fun provideRecipeApiService(retrofit: Retrofit): RecipeApiService {
         return retrofit.create(RecipeApiService::class.java)
+    }
+
+    @Singleton
+    @Provides
+    fun provideAuthApiService(retrofit: Retrofit): AuthApiService {
+        return retrofit.create(AuthApiService::class.java)
     }
 }

@@ -2,10 +2,12 @@ package com.example.munchstr.ui.screens.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -13,9 +15,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -31,28 +37,41 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.example.munchstr.R
 import com.example.munchstr.model.Recipe
 import com.example.munchstr.ui.components.AppCard
+import com.example.munchstr.ui.components.AppGlideSubcomposition
 import com.example.munchstr.ui.navigation.NavigationRoutes
 import com.example.munchstr.viewModel.RecipeViewModel
+import com.example.munchstr.viewModel.SignInViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
-fun HomePage(navController: NavHostController, recipeViewModel: RecipeViewModel) {
+fun HomePage(
+    navController: NavHostController,
+    recipeViewModel: RecipeViewModel,
+    signInViewModel: SignInViewModel
+) {
+    val recipes = recipeViewModel.recipes
+    val userInfo by signInViewModel.userData.collectAsState()
 
     LaunchedEffect(Unit){
-        recipeViewModel.loadRecipes()
+        if(recipes.isEmpty()){
+            recipeViewModel.loadRecipes()
+        }
     }
 
-    val recipes = recipeViewModel.recipes
-//    println(recipes)
+    val ptrState=
+        rememberPullRefreshState(recipeViewModel.isRefreshing.value, {recipeViewModel
+            .loadRecipes()})
+
+    println(signInViewModel.userData)
     Scaffold(
         topBar = {
             TopAppBar(
@@ -68,24 +87,29 @@ fun HomePage(navController: NavHostController, recipeViewModel: RecipeViewModel)
                         )
                         Box(modifier = Modifier.padding(20.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = { /*TODO*/ }) {
+                                IconButton(onClick = {
+                                    navController.navigate(NavigationRoutes.EDIT_PROFILE)
+                                }) {
                                     Icon(Icons.Filled.Search,
                                         contentDescription = "Search",
                                         tint = Color(123, 123, 125)
                                     )
                                 }
-                                Image(painter =
-                                painterResource(id = R.drawable
-                                    .dall_e_2023_10_19_10_14_13___photo_profile_pic_of_a_young_man_with_tan_skin__spiky_black_hair__and_hazel_eyes__he_has_a_playful_smirk_and_is_wearing_a_gray_t_shirt,),
-                                    contentDescription = "avatar",
-                                    contentScale = ContentScale.Crop,
-                                    modifier= Modifier
-                                        .width(45.dp)
-                                        .height
-                                            (45.dp)
-                                        .clip(CircleShape)
-                                        .clipToBounds()
-                                )
+                                Box(modifier = Modifier
+                                    .width(45.dp)
+                                    .height
+                                        (45.dp)
+                                    .clip(CircleShape)
+                                    .clickable {
+                                    navController.navigate(NavigationRoutes.EDIT_PROFILE)
+                                }) {
+                                    userInfo?.photoURL?.let {
+                                        AppGlideSubcomposition(
+                                            imageUri = it,
+                                            modifier = Modifier.clipToBounds()
+                                        )
+                                    }
+                                }
                             }
 
                         }
@@ -112,21 +136,33 @@ fun HomePage(navController: NavHostController, recipeViewModel: RecipeViewModel)
                                },
         containerColor = MaterialTheme.colorScheme.background
     ) {
-        Column(modifier = Modifier.padding(it)) {
+        Column(
+            modifier = Modifier
+                .padding(it)
+                .fillMaxSize()
+        ) {
+            Box(modifier = Modifier
+                .pullRefresh(ptrState)
+                .fillMaxSize()) {
             LazyColumn(
                 content = {
                     items(
                         items = recipes,
-                        key = {item: Recipe ->  item.uuid}
-                    ){recipe ->
+                        key = { item: Recipe -> item.uuid }
+                    ) { recipe ->
                         AppCard(recipe = recipe, onClick = {
                             handleCardClick(navController, recipe.uuid)
                         })
                     }
                 }
-                )
+            )
+            PullRefreshIndicator(
+                recipeViewModel.isRefreshing.value, ptrState,
+                Modifier.align(Alignment.TopCenter)
+            )
         }
     }
+        }
 }
 
 fun handleCardClick(navController: NavController, uuid: String){

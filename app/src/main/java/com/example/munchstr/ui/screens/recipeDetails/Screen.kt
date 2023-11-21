@@ -8,15 +8,19 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -42,6 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -57,8 +62,9 @@ import com.example.munchstr.ui.components.SaveButton
 import com.example.munchstr.ui.components.Sharebutton
 import com.example.munchstr.ui.components.UserIconAndName
 import com.example.munchstr.viewModel.RecipeViewModel
+import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun RecipeDetails(
     navController: NavHostController,
@@ -72,7 +78,10 @@ fun RecipeDetails(
     }
     val recipe = recipeViewModel.selectedRecipe.value
 
-    Column() {
+    val ptrState=
+        rememberPullRefreshState(recipeViewModel.isRefreshing.value, {recipeViewModel.loadSingleRecipe(recipeId)})
+
+    Column {
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -117,110 +126,120 @@ fun RecipeDetails(
                 }
             },
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(it)
-                    .verticalScroll(
-                        rememberScrollState()
-                    ),
-            ) {
-                Box(
-                    Modifier
-                        .padding(all = 10.dp)
-                        .fillMaxWidth()
+            Box(modifier = Modifier
+                .padding(it)
+                .pullRefresh(ptrState)
+                .fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .verticalScroll(
+                            rememberScrollState()
+                        ),
                 ) {
-                    Column {
-                        if (recipe != null) {
-                            Text(
-                                text = recipe.tags.first(),
-                                style = MaterialTheme.typography
-                                    .titleSmall,
-                                textDecoration = TextDecoration
-                                    .Underline,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(bottom = 5.dp)
-                            )
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f, fill = false)) {
+                    Box(
+                        Modifier
+                            .padding(all = 10.dp)
+                            .fillMaxWidth()
+                    ) {
+                        Column {
+                            if (recipe != null) {
+                                Text(
+                                    text = recipe.tags.first(),
+                                    style = MaterialTheme.typography
+                                        .titleSmall,
+                                    textDecoration = TextDecoration
+                                        .Underline,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(bottom = 5.dp)
+                                )
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(
+                                    modifier = Modifier.weight(
+                                        1f,
+                                        fill = false
+                                    )
+                                ) {
+                                    if (recipe != null) {
+                                        Text(
+                                            text = recipe.name,
+                                            style = MaterialTheme
+                                                .typography.titleLarge,
+                                            color = MaterialTheme
+                                                .colorScheme.onSecondaryContainer,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    UserIconAndName()
+                                }
                                 if (recipe != null) {
-                                    Text(
-                                        text = recipe.name,
-                                        style = MaterialTheme
-                                            .typography.titleLarge,
-                                        color = MaterialTheme
-                                            .colorScheme.onSecondaryContainer,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                    PrepTimeAndCookTime(
+                                        prepTime = recipe
+                                            .preparationTime,
+                                        cookTime = recipe.cookTime
                                     )
                                 }
-                                UserIconAndName()
-                            }
-                            if (recipe != null) {
-                                PrepTimeAndCookTime(prepTime = recipe
-                                    .preparationTime,
-                                    cookTime = recipe.cookTime
-                                    )
                             }
                         }
                     }
-                }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(330.dp)
-                ) {
-                    if (recipe != null) {
-                        AppGlideSubcomposition(imageUri = recipe.photo)
-                    }
-                }
-                Row(
-                    modifier = Modifier
-                        .padding(horizontal = 10.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(modifier = Modifier.padding(bottom = 5.dp)) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            LikeButton(tint = Color.Unspecified)
-                            Text(
-                                text = "32 Likes", style = MaterialTheme
-                                    .typography.labelSmall
-                            )
-                        }
-                        CommentButton {
-                            showBottomSheet = true
-                        }
-                        Sharebutton(content = "")
-                    }
-                    SaveButton()
-                }
-                HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
-                Column(modifier = Modifier.padding(10.dp)) {
-                    if (recipe != null) {
-                        RecipeDescription(description = recipe.description)
-                    }
-                    if (recipe != null) {
-                        RecipeIngredients(ingredients = recipe.ingredients)
-                    }
-                    if (recipe != null) {
-                        RecipeInstructions(instructions = recipe.instructions)
-                    }
-                    if (recipe != null) {
-                        RecipeNutritionalFacts(facts = recipe.nutrition)
-                    }
-                }
-                if (showBottomSheet) {
-                    ModalBottomSheet(
-                        onDismissRequest = {
-                            showBottomSheet = false
-                        },
-                        sheetState = sheetState,
-                        modifier = Modifier.fillMaxHeight(1f)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(330.dp)
                     ) {
+                        if (recipe != null) {
+                            AppGlideSubcomposition(imageUri = recipe.photo)
+                        }
+                    }
+                    Row(
+                        modifier = Modifier
+                            .padding(horizontal = 10.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(modifier = Modifier.padding(bottom = 5.dp)) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                LikeButton(tint = Color.Unspecified)
+                                Text(
+                                    text = "32 Likes", style = MaterialTheme
+                                        .typography.labelSmall
+                                )
+                            }
+                            CommentButton {
+                                showBottomSheet = true
+                            }
+                            Sharebutton(content = "")
+                        }
+                        SaveButton()
+                    }
+                    HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        if (recipe != null) {
+                            RecipeDescription(description = recipe.description)
+                        }
+                        if (recipe != null) {
+                            RecipeIngredients(ingredients = recipe.ingredients)
+                        }
+                        if (recipe != null) {
+                            RecipeInstructions(instructions = recipe.instructions)
+                        }
+                        if (recipe != null) {
+                            RecipeNutritionalFacts(facts = recipe.nutrition)
+                        }
+                    }
+                    if (showBottomSheet) {
+                        ModalBottomSheet(
+                            onDismissRequest = {
+                                showBottomSheet = false
+                            },
+                            sheetState = sheetState,
+                            modifier = Modifier.fillMaxHeight(1f)
+                        ) {
+                        }
                     }
                 }
             }
@@ -235,6 +254,7 @@ fun RecipeDescription(description: String) {
             text = "Description",
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Justify,
             modifier = Modifier.padding(bottom = 5.dp)
         )
         Text(text = description,
@@ -252,8 +272,14 @@ fun RecipeIngredients(ingredients: List<com.example.munchstr.ui.screens.addRecip
             modifier = Modifier.padding(bottom = 5.dp)
         )
         Column {
-            ingredients.forEach {
-                AppCheckBox(text = "${it.name} ${it.quantity} ${it.unit}")
+            ingredients.forEach { it ->
+                AppCheckBox(text = "${it.name.replaceFirstChar {
+                    if (it.isLowerCase()) it.titlecase(
+                        Locale.ROOT
+                    ) else it.toString()
+                }} ${it.quantity} " +
+                        it.unit
+                )
             }
         }
     }
@@ -297,7 +323,7 @@ fun NutritionalFacts(facts: List<Nutrition>) {
     FlowRow(
         horizontalArrangement = Arrangement.Center
     ) {
-        facts.forEach { it ->
+        facts.forEach {
             NutrientLabel(nutrientName = it.label, amount = "${it.value} ${it.unit}")
         }
     }

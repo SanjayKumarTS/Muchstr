@@ -24,9 +24,13 @@ class RecipeViewModel @Inject constructor(private val apiService: RecipeApiServi
     private val _selectedRecipe = mutableStateOf<Recipe?>(null)
     val selectedRecipe: State<Recipe?> = _selectedRecipe
 
+    private val _isRefreshing = mutableStateOf(false)
+    val isRefreshing: State<Boolean> = _isRefreshing
+
     fun loadRecipes() {
         viewModelScope.launch {
             try {
+                _isRefreshing.value = true
                 val response = apiService.findRecipeByRecipeName()
                 if (response.isSuccessful) {
                     val recipesList = response.body()?.recipes
@@ -47,12 +51,16 @@ class RecipeViewModel @Inject constructor(private val apiService: RecipeApiServi
                 // There was an error performing the HTTP request
                 Log.e("loadRecipes", "Exception occurred: ${e.message}", e)
             }
+            finally {
+                _isRefreshing.value = false
+            }
         }
     }
 
     fun loadSingleRecipe(recipeId: String){
         viewModelScope.launch {
             try {
+                _isRefreshing.value = true
                 val response = apiService.findRecipeByRecipeID(uuid = recipeId)
                 if(response.isSuccessful){
                     val recipe = response.body()?.recipes?.first()
@@ -72,6 +80,9 @@ class RecipeViewModel @Inject constructor(private val apiService: RecipeApiServi
             }
             catch (e: Exception){
                 Log.e("loadSingleRecipe", "Exception occurred: ${e.message}", e)
+            }
+            finally {
+                _isRefreshing.value = false
             }
         }
     }

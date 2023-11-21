@@ -1,29 +1,42 @@
 package com.example.munchstr
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.munchstr.ui.navigation.NavigationRoutes
+import com.example.munchstr.ui.screens.editProfile.EditProfile
 import com.example.munchstr.ui.screens.home.HomePage
+import com.example.munchstr.ui.screens.login.Login
 import com.example.munchstr.ui.screens.recipeDetails.RecipeDetails
 import com.example.munchstr.viewModel.RecipeViewModel
+import com.example.munchstr.viewModel.SignInViewModel
 
 @Composable
 fun MyApp(){
     val navController = rememberNavController()
+    val signInViewModel: SignInViewModel = hiltViewModel()
+    val recipeViewModel: RecipeViewModel = hiltViewModel()
     NavHost(navController = navController, startDestination =
-    NavigationRoutes.HOME_ROUTE){
-        composable(NavigationRoutes.HOME_ROUTE){
-            val recipeViewModel: RecipeViewModel = hiltViewModel()
-            HomePage(navController, recipeViewModel)
+    NavigationRoutes.LOGIN){
+        composable(NavigationRoutes.LOGIN){
+            Log.d("Navigation","To Login Screen")
+            Login(navController = navController,signInViewModel=signInViewModel)
         }
-        composable("${NavigationRoutes.RECIPE_DETAILS_ROUTE}/{recipeId}"){
-            val recipeViewModel: RecipeViewModel = hiltViewModel(it)
-            RecipeDetails(navController,recipeViewModel, it.arguments?.getString("recipeId")
-                .toString())
+        composable(NavigationRoutes.HOME_ROUTE){
+            Log.d("Navigation","To Home Screen")
+            HomePage(navController = navController, recipeViewModel = recipeViewModel,
+                signInViewModel = signInViewModel)
+        }
+        composable("${NavigationRoutes.RECIPE_DETAILS_ROUTE}/{recipeId}") {
+            Log.d("Navigation","To Recipe Details")
+            RecipeDetails(navController = navController, recipeViewModel = recipeViewModel, recipeId = it.arguments?.getString("recipeId").toString())
+        }
+        composable(NavigationRoutes.EDIT_PROFILE){
+            Log.d("Navigation","To Edit Profile Screen")
+            EditProfile(navController = navController, signInViewModel = signInViewModel)
         }
     }
 }

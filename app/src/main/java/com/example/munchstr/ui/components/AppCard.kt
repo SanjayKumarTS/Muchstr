@@ -43,7 +43,8 @@ fun AppCard(recipe: Recipe, onClick: () -> Unit) {
                 .height(200.dp)
                 .fillMaxWidth()
         ) {
-            AppGlideSubcomposition(imageUri = recipe.photo)
+            AppGlideSubcomposition(imageUri = recipe.photo, modifier =
+            Modifier.matchParentSize())
         }
         Column(modifier = Modifier.padding(horizontal = 20.dp)){
             Row(
