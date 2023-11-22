@@ -21,6 +21,19 @@ fun Login(
     signInViewModel: SignInViewModel = hiltViewModel(),
     navController: NavHostController
 ) {
+
+    LaunchedEffect(Unit) {
+        val cachedUser = signInViewModel.checkCachedUserData()
+        if (cachedUser != null) {
+            Log.d("Login", "Cached user found, navigating to Home Route")
+            navController.navigate(NavigationRoutes.HOME_ROUTE) {
+                popUpTo(navController.graph.startDestinationId) {
+                    inclusive = true
+                }
+            }
+        }
+    }
+
     val activityResultLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
@@ -41,7 +54,7 @@ fun Login(
     val signInState = signInViewModel.state.collectAsState()
     if (signInState.value.isSignInSuccessful) {
         LaunchedEffect(signInState.value) {
-            Log.d("Login","Navigating to Home Route")
+            Log.d("Login", "Sign-in successful, navigating to Home Route")
             navController.navigate(NavigationRoutes.HOME_ROUTE) {
                 popUpTo(navController.graph.startDestinationId) {
                     inclusive = true

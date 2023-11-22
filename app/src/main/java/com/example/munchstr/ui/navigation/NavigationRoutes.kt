@@ -6,6 +6,8 @@ object NavigationRoutes {
     const val SEARCH_ROUTE = "search"
     const val LOGIN = "login"
     const val EDIT_PROFILE = "editProfile"
+    const val BOOKMARKS = "Bookmarks"
+    const val USER_PROFILE = "UserProfile"
 
     fun recipeDetailsRoute(recipeId: String): String {
         return "$RECIPE_DETAILS_ROUTE/$recipeId"

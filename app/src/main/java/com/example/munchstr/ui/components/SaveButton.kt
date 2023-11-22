@@ -8,8 +8,8 @@ import androidx.compose.ui.res.painterResource
 import com.example.munchstr.R
 
 @Composable
-fun SaveButton(){
-    IconButton(onClick = { /*TODO*/ }) {
+fun SaveButton(onClick: () -> Unit){
+    IconButton(onClick =  onClick) {
         Icon(painter = painterResource(id = R.drawable.bookmark_add),
             contentDescription =
         "Bookmark")

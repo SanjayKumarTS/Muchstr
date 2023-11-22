@@ -51,6 +51,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.example.munchstr.model.Ingredient
 import com.example.munchstr.model.Nutrition
 import com.example.munchstr.ui.components.AppCheckBox
 import com.example.munchstr.ui.components.AppGlideSubcomposition
@@ -174,7 +175,10 @@ fun RecipeDetails(
                                             overflow = TextOverflow.Ellipsis
                                         )
                                     }
-                                    UserIconAndName()
+                                    if (recipe != null) {
+                                        UserIconAndName(recipe.name, recipe
+                                            .photo, "Yesterday")
+                                    }
                                 }
                                 if (recipe != null) {
                                     PrepTimeAndCookTime(
@@ -214,7 +218,12 @@ fun RecipeDetails(
                             }
                             Sharebutton(content = "")
                         }
-                        SaveButton()
+                        SaveButton {
+                            if (recipe != null) {
+                                recipeViewModel
+                                    .insertRecipeToDatabase(recipe = recipe)
+                            }
+                        }
                     }
                     HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
                     Column(modifier = Modifier.padding(10.dp)) {
@@ -263,7 +272,7 @@ fun RecipeDescription(description: String) {
 }
 
 @Composable
-fun RecipeIngredients(ingredients: List<com.example.munchstr.ui.screens.addRecipe.Ingredient>) {
+fun RecipeIngredients(ingredients: List<Ingredient>) {
     Column(modifier = Modifier.padding(5.dp)) {
         Text(
             text = "Ingredients",

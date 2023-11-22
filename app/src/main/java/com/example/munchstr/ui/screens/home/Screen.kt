@@ -1,5 +1,7 @@
 package com.example.munchstr.ui.screens.home
 
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -45,31 +47,37 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.example.munchstr.R
 import com.example.munchstr.model.Recipe
+import com.example.munchstr.model.ResponseFindRecipesForUserDTO
 import com.example.munchstr.ui.components.AppCard
 import com.example.munchstr.ui.components.AppGlideSubcomposition
 import com.example.munchstr.ui.navigation.NavigationRoutes
 import com.example.munchstr.viewModel.RecipeViewModel
 import com.example.munchstr.viewModel.SignInViewModel
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class,
+    ExperimentalFoundationApi::class
+)
 @Composable
 fun HomePage(
     navController: NavHostController,
     recipeViewModel: RecipeViewModel,
     signInViewModel: SignInViewModel
 ) {
-    val recipes = recipeViewModel.recipes
+    val recipes:List<ResponseFindRecipesForUserDTO> = recipeViewModel.recipesForCards
+//    val recipes = recipeViewModel.recipes
     val userInfo by signInViewModel.userData.collectAsState()
 
     LaunchedEffect(Unit){
         if(recipes.isEmpty()){
-            recipeViewModel.loadRecipes()
+            userInfo?.let { recipeViewModel.loadRecipesForUser(it.uuid) }
         }
     }
 
     val ptrState=
-        rememberPullRefreshState(recipeViewModel.isRefreshing.value, {recipeViewModel
-            .loadRecipes()})
+        rememberPullRefreshState(recipeViewModel.isRefreshing.value, { userInfo?.let {
+            recipeViewModel.loadRecipesForUser(
+                it.uuid)
+        } })
 
     println(signInViewModel.userData)
     Scaffold(
@@ -88,7 +96,6 @@ fun HomePage(
                         Box(modifier = Modifier.padding(20.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = {
-                                    navController.navigate(NavigationRoutes.EDIT_PROFILE)
                                 }) {
                                     Icon(Icons.Filled.Search,
                                         contentDescription = "Search",
@@ -101,7 +108,8 @@ fun HomePage(
                                         (45.dp)
                                     .clip(CircleShape)
                                     .clickable {
-                                    navController.navigate(NavigationRoutes.EDIT_PROFILE)
+                                    navController.navigate(NavigationRoutes
+                                        .USER_PROFILE)
                                 }) {
                                     userInfo?.photoURL?.let {
                                         AppGlideSubcomposition(
@@ -148,11 +156,25 @@ fun HomePage(
                 content = {
                     items(
                         items = recipes,
-                        key = { item: Recipe -> item.uuid }
                     ) { recipe ->
-                        AppCard(recipe = recipe, onClick = {
-                            handleCardClick(navController, recipe.uuid)
-                        })
+
+                        AppCard(
+                            author = recipe.author,
+                            recipe = recipe.recipe,
+                            likesCount = recipe.likesCount,
+                            commentsCount = recipe.commentsCount,
+                            creationTime = recipe.recipe.creationTime,
+                            onClick = {
+                            handleCardClick(
+                                navController,
+                                uuid = recipe.uuid
+                            )
+                        },
+                            modifier = Modifier.animateItemPlacement
+                                (animationSpec = tween(durationMillis =
+                            600)
+                            )
+                        )
                     }
                 }
             )

@@ -1,5 +1,6 @@
 package com.example.munchstr.viewModel
 
+import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
@@ -10,6 +11,7 @@ import com.example.munchstr.model.GoogleSignInToken
 import com.example.munchstr.model.SignInState
 import com.example.munchstr.model.User
 import com.example.munchstr.network.AuthApiService
+import com.example.munchstr.sharedPreferences.UserRepository
 import com.example.munchstr.ui.screens.login.GoogleAuthUiClient
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +24,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SignInViewModel @Inject constructor(
     private val googleAuthUiClient: GoogleAuthUiClient,
-    private val authApiService: AuthApiService
+    private val authApiService: AuthApiService,
+    private val userRepository: UserRepository
 ) : ViewModel() {
     private val _state = MutableStateFlow(SignInState())
     val state: StateFlow<SignInState> = _state.asStateFlow()
@@ -63,6 +66,7 @@ class SignInViewModel @Inject constructor(
                         if (response.isSuccessful) {
                             val userInfo: User = response.body()!!
                             _userData.value = userInfo
+                            userRepository.saveUserData(userInfo)
                             _state.update { it.copy(isSignInSuccessful = true) }
                         } else {
                             _state.update { it.copy(isSignInSuccessful = false, signInError = "Backend authentication failed") }
@@ -79,6 +83,15 @@ class SignInViewModel @Inject constructor(
         }
     }
 
+    fun checkCachedUserData():User? {
+        val cachedUser = userRepository.getCachedUserData()
+        if (cachedUser != null) {
+            _userData.value = cachedUser
+            _state.value = SignInState(isSignInSuccessful = true)
+        }
+        return cachedUser
+    }
+
     private fun resetState() {
         _state.update { SignInState() }
     }
@@ -88,8 +101,9 @@ class SignInViewModel @Inject constructor(
             try {
                 googleAuthUiClient.signOut()
                 Log.d("SignInViewModel", "Sign-out successful")
-                _signOutSuccess.value = true  // Set signOutSuccess to true on successful sign-out
-                _userData.value = null  // Optionally reset user data
+                _signOutSuccess.value = true
+                _userData.value = null
+                userRepository.clearUserData()
                 resetState()
             } catch (e: Exception) {
                 Log.e("SignInViewModel", "Sign-out failed", e)

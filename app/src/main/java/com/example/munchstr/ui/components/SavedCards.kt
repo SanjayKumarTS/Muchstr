@@ -8,9 +8,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,34 +24,35 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.example.munchstr.R
-import com.example.munchstr.model.Author
-import com.example.munchstr.model.RecipeInCards
+import com.example.munchstr.model.Recipe
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun AppCard(
-    recipe: RecipeInCards,
+ fun SavedCards(
+    recipe: Recipe,
     onClick: () -> Unit,
-    modifier: Modifier,
-    likesCount: Int,
-    commentsCount: Int,
-    creationTime: String,
-    author: Author
-) {
+    onDelete: () -> Unit,
+    modifier: Modifier
+){
     ElevatedCard(onClick = onClick , modifier = modifier
         .fillMaxWidth()
         .padding(15.dp)
-    ) {
-        UserIconAndName(author.name,author.photo, creationTime)
+    )
+    {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            UserIconAndName(recipe.name,recipe.photo, "Yesterday")
+            IconButton(onClick = { onDelete() },
+                modifier = Modifier.align(Alignment.TopEnd)) {
+                Icon(Icons.Filled.Delete, contentDescription = "Delete")
+            }
+        }
+
         Box(
             modifier = Modifier
                 .height(200.dp)
                 .fillMaxWidth()
         ) {
-            AppGlideSubcomposition(imageUri = recipe.photo, modifier =
-            Modifier.matchParentSize())
+            AppGlideSubcomposition(imageUri = recipe.photo)
         }
         Column(modifier = Modifier.padding(horizontal = 20.dp)){
             Row(
@@ -79,7 +84,7 @@ fun AppCard(
                     .padding(bottom = 20.dp)) {
                 Row (verticalAlignment = Alignment.CenterVertically){
                     Text(
-                        text = "$likesCount Likes",
+                        text = "32 Likes",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
@@ -87,7 +92,7 @@ fun AppCard(
                         .check_indeterminate_small) ,
                         contentDescription = "")
                     Text(
-                        text = "$commentsCount Comments",
+                        text = "12 Comments",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
@@ -105,8 +110,3 @@ fun AppCard(
     }
 }
 
-//@Composable
-//@Preview(showBackground = false)
-//fun AppCardPreview(){
-//    AppCard(recipe)
-//}

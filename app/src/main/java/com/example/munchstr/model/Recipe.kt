@@ -1,6 +1,5 @@
 package com.example.munchstr.model
 
-import com.example.munchstr.ui.screens.addRecipe.Ingredient
 
 data class Recipe(
     val uuid: String,
