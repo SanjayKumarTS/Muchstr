@@ -62,6 +62,25 @@ class RecipeViewModel @Inject constructor(private val apiService:
 
     val navigateToHome = MutableStateFlow(false)
 
+    fun searchRecipes(name: String) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.searchRecipe(name)
+                if (response.isSuccessful) {
+                    // Update the LiveData with the search results
+                    _recipesForCards.clear()
+                    response.body()?.let { _recipesForCards.addAll(it) }
+                } else {
+                    // Handle API error
+                    Log.e("RecipeViewModel", "Error during search: ${response.errorBody()?.string()}")
+                }
+            } catch (e: Exception) {
+                // Handle exceptions
+                Log.e("RecipeViewModel", "Exception during search: ${e.message}")
+            }
+        }
+    }
+
     fun addLike(recipeId: String, authorId: String){
         viewModelScope.launch{
             try {
