@@ -1,5 +1,6 @@
 package com.example.munchstr.ui.screens.bookmarks
 
+import android.util.Log
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -36,11 +37,18 @@ import com.example.munchstr.ui.components.SavedCards
 import com.example.munchstr.ui.screens.home.handleCardClick
 import com.example.munchstr.viewModel.RecipeViewModel
 
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun Bookmarks(navController: NavHostController, recipeViewModel: RecipeViewModel) {
 
     val savedRecipes by recipeViewModel.savedRecipesFlow.collectAsState(initial = emptyList())
+    val savedAuthors by recipeViewModel.savedAuthorsFlow.collectAsState(initial = emptyList())
+
+    Log.d("BookMarks",
+        savedRecipes.map { recipe -> recipe.authorId }.toString()
+    )
+    Log.d("BookMarks", savedAuthors.map { author -> author.uuid }.toString())
 
     Scaffold(
         topBar = {
@@ -89,17 +97,24 @@ fun Bookmarks(navController: NavHostController, recipeViewModel: RecipeViewModel
                         items = savedRecipes,
                         key = {item: Recipe ->  item.uuid}
                     ){recipe ->
-                        SavedCards(recipe = recipe, onClick = {
-                            handleCardClick(navController, recipe.uuid)
-                        },
-                            onDelete = {
-                                println("OnDelete")
-                                recipeViewModel.deleteRecipeFromDatabase(uuid = recipe.uuid)
-                            }
-                            ,modifier = Modifier.animateItemPlacement
-                                (animationSpec = tween(durationMillis =
-                            600))
-                        )
+                        savedAuthors.find { author -> author.uuid ==
+                                recipe.authorId }?.let { it1 ->
+                            SavedCards(recipe = recipe,
+                                author = it1,
+                                onClick = {
+                                    handleCardClick(
+                                        navController,
+                                        recipe.uuid
+                                    )
+                                },
+                                onDelete = {
+                                    println("OnDelete")
+                                    recipeViewModel.deleteRecipeFromDatabase(uuid = recipe.uuid)
+                                },modifier = Modifier.animateItemPlacement
+                                    (animationSpec = tween(durationMillis =
+                                600))
+                            )
+                        }
                     }
                 }
             )

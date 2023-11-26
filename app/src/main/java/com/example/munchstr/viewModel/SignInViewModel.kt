@@ -5,12 +5,21 @@ import android.content.Intent
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.munchstr.model.Author
+import com.example.munchstr.model.FollowersAndFollowing
+import com.example.munchstr.model.GetUsersRequest
 import com.example.munchstr.model.GoogleSignInToken
+import com.example.munchstr.model.ResponseFindRecipesForUserDTO
 import com.example.munchstr.model.SignInState
 import com.example.munchstr.model.User
+import com.example.munchstr.model.UserForProfile
 import com.example.munchstr.network.AuthApiService
+import com.example.munchstr.network.FollowersAndFollowingApiService
 import com.example.munchstr.sharedPreferences.UserRepository
 import com.example.munchstr.ui.screens.login.GoogleAuthUiClient
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,7 +34,8 @@ import javax.inject.Inject
 class SignInViewModel @Inject constructor(
     private val googleAuthUiClient: GoogleAuthUiClient,
     private val authApiService: AuthApiService,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val followersAndFollowingApiService: FollowersAndFollowingApiService
 ) : ViewModel() {
     private val _state = MutableStateFlow(SignInState())
     val state: StateFlow<SignInState> = _state.asStateFlow()
@@ -35,6 +45,110 @@ class SignInViewModel @Inject constructor(
 
     private val _userData = MutableStateFlow<User?>(null)
     val userData: StateFlow<User?> = _userData.asStateFlow()
+
+    private val _selectedUserData = MutableStateFlow<UserForProfile?>(null)
+    val selectedUserData: StateFlow<UserForProfile?> = _selectedUserData.asStateFlow()
+
+    private val _isRefreshing = mutableStateOf(false)
+    val isRefreshing: State<Boolean> = _isRefreshing
+
+    private val _searchUserData = mutableStateListOf<UserForProfile>()
+    val searchUserData: List<UserForProfile> = _searchUserData
+
+    private val _followersFollowing = mutableStateOf<FollowersAndFollowing?>(null)
+    val followersFollowing:State<FollowersAndFollowing?> = _followersFollowing
+
+    fun loadFollowersFollowing(uuid:String){
+        Log.i("loadSelectedUserData", "$uuid")
+        viewModelScope.launch{
+            try {
+                _isRefreshing.value = true
+                val response = followersAndFollowingApiService
+                    .getFollowersAndFollowing(uuid = uuid)
+                if(response.isSuccessful){
+                    _followersFollowing.value = response.body()
+                }
+                else {
+                    val errorBody = response.errorBody()?.string()
+                    val statusCode = response.code()
+                    if (errorBody.isNullOrEmpty()) {
+                        Log.e("loadRecipes", "Error response with status code: $statusCode")
+                    } else {
+                        Log.e("loadRecipes", "Error response ($statusCode): $errorBody")
+                    }
+                }
+            }catch (e: Exception) {
+                // There was an error performing the HTTP request
+                Log.e("loadRecipes", "Exception occurred: ${e.message}", e)
+            }
+            finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
+
+    fun loadSelectedUserData(uuid: String){
+        Log.i("loadSelectedUserData", "$uuid")
+        viewModelScope.launch{
+            try {
+                _isRefreshing.value = true
+                val response = authApiService.findUsers(uuid = uuid,name =
+                null, email = null)
+                if(response.isSuccessful){
+                    val userInfo = response.body()?.get(0)
+                    _selectedUserData.value = userInfo
+                    Log.i("loadSelectedUserData", "${response.body()}")
+                }
+                else {
+                    val errorBody = response.errorBody()?.string()
+                    val statusCode = response.code()
+                    if (errorBody.isNullOrEmpty()) {
+                        Log.e("loadRecipes", "Error response with status code: $statusCode")
+                    } else {
+                        Log.e("loadRecipes", "Error response ($statusCode): $errorBody")
+                    }
+                }
+            }catch (e: Exception) {
+                // There was an error performing the HTTP request
+                Log.e("loadRecipes", "Exception occurred: ${e.message}", e)
+            }
+            finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
+
+    fun searchUsers(name: String){
+        viewModelScope.launch{
+            try {
+                _isRefreshing.value = true
+                val response = authApiService.findUsers(
+                    uuid = null,name = name, email = null)
+                if(response.isSuccessful){
+                    val userInfos = response.body()
+                    _searchUserData.clear()
+                    if (userInfos != null) {
+                        _searchUserData.addAll(userInfos)
+                    }
+                }
+                else {
+                    val errorBody = response.errorBody()?.string()
+                    val statusCode = response.code()
+                    if (errorBody.isNullOrEmpty()) {
+                        Log.e("loadRecipes", "Error response with status code: $statusCode")
+                    } else {
+                        Log.e("loadRecipes", "Error response ($statusCode): $errorBody")
+                    }
+                }
+            }catch (e: Exception) {
+                // There was an error performing the HTTP request
+                Log.e("loadRecipes", "Exception occurred: ${e.message}", e)
+            }
+            finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
 
     fun signIn(activityResultLauncher: ActivityResultLauncher<IntentSenderRequest>) {
         viewModelScope.launch {

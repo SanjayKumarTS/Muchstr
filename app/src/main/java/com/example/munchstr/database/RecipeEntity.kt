@@ -17,7 +17,8 @@ data class RecipeEntity(
     val preparationTime: Int,
     val cookTime: Int,
     val photo: String,
-    val tags: List<String>
+    val tags: List<String>,
+    val createdAt: String
 )
 
 

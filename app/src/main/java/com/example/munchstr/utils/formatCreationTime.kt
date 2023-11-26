@@ -1,52 +1,46 @@
 package com.example.munchstr.utils
 
-import android.os.Build
-import androidx.annotation.RequiresApi
-import java.text.ParseException
-import java.time.*
-import java.time.temporal.ChronoUnit
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
-
-@RequiresApi(Build.VERSION_CODES.O)
 fun formatCreationTime(creationTimeString: String): String {
-    val dateFormat = SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss z")
-    val creationTime: Date? = try {
-        dateFormat.parse(creationTimeString)
-    } catch (e: ParseException) {
-        null
-    }
+    // Define two different date formats
+    val format1 =
+        SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss 'GMT'Z", Locale.ENGLISH)
+    val format2 =
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.ENGLISH)
 
-    if (creationTime != null) {
-        val now = Instant.now()
-        val elapsedTime = Duration.between(creationTime.toInstant(), now)
+    // Set time zones
+    format1.timeZone = TimeZone.getTimeZone("GMT")
+    format2.timeZone = TimeZone.getTimeZone("UTC")
 
-        if (elapsedTime.toDays() > 0) {
-            val days = elapsedTime.toDays()
-            return if (days.toInt() == 1) {
-                "1 day ago"
-            } else {
-                "$days days ago"
-            }
-        } else if (elapsedTime.toHours() > 0) {
-            val hours = elapsedTime.toHours()
-            return if (hours.toInt() == 1) {
-                "1 hour ago"
-            } else {
-                "$hours hours ago"
-            }
-        } else if (elapsedTime.toMinutes() > 0) {
-            val minutes = elapsedTime.toMinutes()
-            return if (minutes.toInt() == 1) {
-                "1 minute ago"
-            } else {
-                "$minutes minutes ago"
-            }
-        } else {
-            return "Just now"
-        }
-    } else {
-        return "Invalid creation time format"
+    // Try parsing with the first format
+    val creationTime: Date = try {
+        format1.parse(creationTimeString)
+    } catch (e: Exception) {
+        null // Parsing failed, try the second format
+    } ?: try {
+        format2.parse(creationTimeString)
+    } catch (e: Exception) {
+        null // Parsing failed with both formats
+    } ?: return "Invalid date"
+
+    // Handle null (parsing failed with both formats)
+
+    // Calculate elapsed time
+    val now = Date()
+    val elapsedTimeMillis = now.time - creationTime.time
+    val elapsedTimeMinutes = elapsedTimeMillis / 60000
+    val elapsedTimeHours = elapsedTimeMinutes / 60
+    val elapsedTimeDays = elapsedTimeHours / 24
+
+    // Format the elapsed time
+    return when {
+        elapsedTimeDays >= 1 -> "${elapsedTimeDays}d"
+        elapsedTimeHours >= 1 -> "${elapsedTimeHours}h"
+        elapsedTimeMinutes >= 1 -> "${elapsedTimeMinutes}m"
+        else -> "Just now"
     }
 }

@@ -1,6 +1,5 @@
 package com.example.munchstr.ui.components
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,11 +22,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.munchstr.R
 import com.example.munchstr.model.RecipeInCards
+import com.example.munchstr.utils.formatCreationTime
 
 @Composable
 fun UserIconAndName(name:String, photo:String, creationTime: String) {
-    val dateRegex = Regex("^\\w{3} \\w{3} \\d{2} \\d{4}")
-    val dateString = dateRegex.find(creationTime)?.groups?.get(0)?.value.toString()
     Row (modifier = Modifier
         .height(IntrinsicSize.Max)
         .padding(10.dp)){
@@ -47,7 +45,9 @@ fun UserIconAndName(name:String, photo:String, creationTime: String) {
             .SpaceEvenly) {
             Text(text = name, style = MaterialTheme
                 .typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
-            Text(text = dateString, style = MaterialTheme.typography.bodySmall,
+            Text(text = formatCreationTime(creationTime), style = MaterialTheme
+                .typography
+                .bodySmall,
                     color = MaterialTheme.colorScheme.onSurface)
 
         }

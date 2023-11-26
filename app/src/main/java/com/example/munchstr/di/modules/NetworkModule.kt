@@ -1,6 +1,8 @@
 package com.example.munchstr.di.modules
 
 import com.example.munchstr.network.AuthApiService
+import com.example.munchstr.network.CommentApiService
+import com.example.munchstr.network.FollowersAndFollowingApiService
 import com.example.munchstr.network.RecipeApiService
 import dagger.Module
 import dagger.Provides
@@ -56,5 +58,18 @@ object NetworkModule {
     @Provides
     fun provideAuthApiService(retrofit: Retrofit): AuthApiService {
         return retrofit.create(AuthApiService::class.java)
+    }
+    @Provides
+    @Singleton
+    fun provideFollowersAndFollowingApiService(retrofit: Retrofit)
+    :FollowersAndFollowingApiService{
+        return retrofit.create(FollowersAndFollowingApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideCommentApiServiceApiService(retrofit: Retrofit)
+            : CommentApiService {
+        return retrofit.create(CommentApiService::class.java)
     }
 }

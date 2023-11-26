@@ -25,14 +25,17 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.munchstr.R
+import com.example.munchstr.model.Author
 import com.example.munchstr.model.Recipe
+import com.example.munchstr.utils.formatCreationTime
 
 @Composable
  fun SavedCards(
     recipe: Recipe,
     onClick: () -> Unit,
     onDelete: () -> Unit,
-    modifier: Modifier
+    modifier: Modifier=Modifier,
+    author: Author
 ){
     ElevatedCard(onClick = onClick , modifier = modifier
         .fillMaxWidth()
@@ -40,7 +43,8 @@ import com.example.munchstr.model.Recipe
     )
     {
         Box(modifier = Modifier.fillMaxWidth()) {
-            UserIconAndName(recipe.name,recipe.photo, "Yesterday")
+            UserIconAndName(author.name,author.photo, formatCreationTime
+                (creationTimeString = recipe.createdAt))
             IconButton(onClick = { onDelete() },
                 modifier = Modifier.align(Alignment.TopEnd)) {
                 Icon(Icons.Filled.Delete, contentDescription = "Delete")
@@ -67,7 +71,7 @@ import com.example.munchstr.model.Recipe
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                LikeButton(tint = Color(28,27,31))
+//                LikeButton(tint = Color(28,27,31))
             }
             Text(
                 text = recipe.description,
@@ -83,21 +87,21 @@ import com.example.munchstr.model.Recipe
                     .fillMaxWidth()
                     .padding(bottom = 20.dp)) {
                 Row (verticalAlignment = Alignment.CenterVertically){
-                    Text(
-                        text = "32 Likes",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                    Image(painter = painterResource(id = R.drawable
-                        .check_indeterminate_small) ,
-                        contentDescription = "")
-                    Text(
-                        text = "12 Comments",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+//                    Text(
+//                        text = "32 Likes",
+//                        style = MaterialTheme.typography.labelSmall,
+//                        color = MaterialTheme.colorScheme.onSecondaryContainer
+//                    )
+//                    Image(painter = painterResource(id = R.drawable
+//                        .check_indeterminate_small) ,
+//                        contentDescription = "")
+//                    Text(
+//                        text = "12 Comments",
+//                        style = MaterialTheme.typography.labelSmall,
+//                        color = MaterialTheme.colorScheme.onSecondaryContainer
+//                    )
                 }
-                Button(onClick = { onClick }, colors = ButtonDefaults
+                Button(onClick =  onClick , colors = ButtonDefaults
                     .buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,

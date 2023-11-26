@@ -1,5 +1,6 @@
 package com.example.munchstr.ui.screens.home
 
+import android.util.Log
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -46,7 +47,6 @@ import androidx.navigation.NavHostController
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.example.munchstr.R
-import com.example.munchstr.model.Recipe
 import com.example.munchstr.model.ResponseFindRecipesForUserDTO
 import com.example.munchstr.ui.components.AppCard
 import com.example.munchstr.ui.components.AppGlideSubcomposition
@@ -64,12 +64,12 @@ fun HomePage(
     signInViewModel: SignInViewModel
 ) {
     val recipes:List<ResponseFindRecipesForUserDTO> = recipeViewModel.recipesForCards
-//    val recipes = recipeViewModel.recipes
     val userInfo by signInViewModel.userData.collectAsState()
 
     LaunchedEffect(Unit){
-        if(recipes.isEmpty()){
+        if(recipes.isEmpty() && !recipeViewModel.isRefreshing.value){
             userInfo?.let { recipeViewModel.loadRecipesForUser(it.uuid) }
+            Log.d("HomePage","$userInfo")
         }
     }
 
@@ -78,8 +78,6 @@ fun HomePage(
             recipeViewModel.loadRecipesForUser(
                 it.uuid)
         } })
-
-    println(signInViewModel.userData)
     Scaffold(
         topBar = {
             TopAppBar(
@@ -96,6 +94,7 @@ fun HomePage(
                         Box(modifier = Modifier.padding(20.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = {
+                                    navController.navigate(NavigationRoutes.SEARCH_ROUTE)
                                 }) {
                                     Icon(Icons.Filled.Search,
                                         contentDescription = "Search",
@@ -133,7 +132,9 @@ fun HomePage(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { /*TODO*/ }, containerColor =
+            FloatingActionButton(onClick = {
+                                           navController.navigate(NavigationRoutes.Add_RECIPE)
+            }, containerColor =
             MaterialTheme.colorScheme.primary) {
             Icon(
                 imageVector = Icons.Filled.Add,
@@ -156,25 +157,36 @@ fun HomePage(
                 content = {
                     items(
                         items = recipes,
+                        key = {item: ResponseFindRecipesForUserDTO ->  item.uuid}
                     ) { recipe ->
-
-                        AppCard(
-                            author = recipe.author,
-                            recipe = recipe.recipe,
-                            likesCount = recipe.likesCount,
-                            commentsCount = recipe.commentsCount,
-                            creationTime = recipe.recipe.creationTime,
-                            onClick = {
-                            handleCardClick(
-                                navController,
-                                uuid = recipe.uuid
+                        recipe.userLiked?.let { it1 ->
+                            AppCard(
+                                author = recipe.author,
+                                recipe = recipe.recipe,
+                                likesCount = recipe.likesCount,
+                                commentsCount = recipe.commentsCount,
+                                creationTime = recipe.recipe.creationTime,
+                                isLiked = it1,
+                                onLikeClicked = {
+                                    // Handle like button click here
+                                    // For example, update the like status in the view model
+                                    userInfo?.let { it1 -> recipeViewModel.addLike(recipe.uuid, it1.uuid) }
+                                },
+                                onClick = {
+                                    recipeViewModel.updateSelectedRecipeAuthor(recipe.author)
+                                    handleCardClick(
+                                        navController,
+                                        recipeId = recipe.uuid,
+                                        likesCount = recipe.likesCount,
+                                        commentsCount = recipe.commentsCount,
+                                    )
+                                },
+                                modifier = Modifier.animateItemPlacement
+                                    (animationSpec = tween(durationMillis =
+                                600)
+                                )
                             )
-                        },
-                            modifier = Modifier.animateItemPlacement
-                                (animationSpec = tween(durationMillis =
-                            600)
-                            )
-                        )
+                        }
                     }
                 }
             )
@@ -187,8 +199,19 @@ fun HomePage(
         }
 }
 
-fun handleCardClick(navController: NavController, uuid: String){
-    navController.navigate(NavigationRoutes.recipeDetailsRoute(recipeId = uuid))
+fun handleCardClick(
+    navController: NavController,
+    recipeId: String,
+    likesCount: Int=0,
+    commentsCount: Int=0,
+    isLiked:Boolean=false
+){
+    navController.navigate(NavigationRoutes.recipeDetailsRoute(
+        recipeId = recipeId,
+        likesCount = likesCount,
+        commentsCount = commentsCount,
+        isLiked = isLiked
+    ))
 }
 
 //@Preview(showBackground = true)

@@ -34,7 +34,9 @@ fun AppCard(
     likesCount: Int,
     commentsCount: Int,
     creationTime: String,
-    author: Author
+    author: Author,
+    isLiked: Boolean, // Add this
+    onLikeClicked: (Boolean) -> Unit
 ) {
     ElevatedCard(onClick = onClick , modifier = modifier
         .fillMaxWidth()
@@ -62,7 +64,11 @@ fun AppCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                LikeButton(tint = Color(28,27,31))
+                LikeButton(
+                    tint = Color(28,27,31),
+                    liked = isLiked,
+                    onClick = onLikeClicked
+                )
             }
             Text(
                 text = recipe.description,

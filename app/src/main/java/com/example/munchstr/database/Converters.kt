@@ -1,6 +1,7 @@
 package com.example.munchstr.database
 
 import androidx.room.TypeConverter
+import com.example.munchstr.model.Author
 import com.example.munchstr.model.Ingredient
 import com.example.munchstr.model.Nutrition
 import com.google.gson.Gson
@@ -39,5 +40,27 @@ class Converters {
     fun toStringList(string: String): List<String> {
         val type = object : TypeToken<List<String>>() {}.type
         return gson.fromJson(string, type)
+    }
+
+    @TypeConverter
+    fun toAuthor(authorString: String): Author {
+        val type = object : TypeToken<Author>() {}.type
+        return gson.fromJson(authorString, type)
+    }
+
+    @TypeConverter
+    fun fromAuthor(author: Author): String {
+        return gson.toJson(author)
+    }
+
+    @TypeConverter
+    fun toAuthorEntity(authorEntityString: String): AuthorEntity {
+        val type = object : TypeToken<AuthorEntity>() {}.type
+        return gson.fromJson(authorEntityString, type)
+    }
+
+    @TypeConverter
+    fun fromAuthorEntity(authorEntity: AuthorEntity): String {
+        return gson.toJson(authorEntity)
     }
 }

@@ -16,16 +16,21 @@ import androidx.compose.ui.graphics.Color
 
 @Composable
 fun LikeButton(
-    modifier: Modifier = Modifier, tint: Color = MaterialTheme.colorScheme.primary
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme
+        .primary,
+    liked: Boolean,
+    onClick: (Boolean) -> Unit
 ){
-
-    var liked by remember {mutableStateOf(false)}
+    println("liked : $liked")
+    var isLiked by remember { mutableStateOf(liked) }
 
     IconButton(onClick = {
-        liked = !liked
+        isLiked = !isLiked
+        onClick(isLiked)
     }) {
         Icon(
-            imageVector =if(liked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+            imageVector =if(isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
             contentDescription = "Like",
 //            tint = tint
         )

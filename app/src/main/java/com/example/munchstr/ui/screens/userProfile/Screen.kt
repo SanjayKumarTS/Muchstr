@@ -1,6 +1,8 @@
 package com.example.munchstr.ui.screens.userProfile
 
 
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,6 +17,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -26,72 +29,139 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.munchstr.R
-import com.example.munchstr.model.User
+import com.example.munchstr.model.ResponseFindRecipesForUserDTO
+import com.example.munchstr.model.UserForProfile
+import com.example.munchstr.ui.components.AppCard
 import com.example.munchstr.ui.components.AppGlideSubcomposition
-import com.example.munchstr.ui.components.SavedCards
 import com.example.munchstr.ui.navigation.NavigationRoutes
+import com.example.munchstr.ui.screens.home.handleCardClick
 import com.example.munchstr.viewModel.RecipeViewModel
 import com.example.munchstr.viewModel.SignInViewModel
 
 
 @Composable
-fun UserProfile(navController: NavController, signInViewModel:
-SignInViewModel, recipeViewModel:RecipeViewModel) {
-    val userInfo by signInViewModel.userData.collectAsState()
-    LazyColumn {
-        item {
-            Card(
+fun UserProfile(
+    navController: NavController,
+    signInViewModel: SignInViewModel,
+    recipeViewModel:RecipeViewModel,
+    selectedUserId: String=""
+) {
+    val user by signInViewModel.userData.collectAsState()
+    val isCurrentUser = selectedUserId.isEmpty()
+
+    val isLoading by signInViewModel.isRefreshing
+
+    LaunchedEffect(selectedUserId) {
+        if (isCurrentUser) {
+            user?.uuid?.let { uuid ->
+                signInViewModel.loadSelectedUserData(uuid)
+                recipeViewModel.loadRecipesOfUser(authorId = uuid)
+            }
+        } else {
+            signInViewModel.loadSelectedUserData(selectedUserId)
+            recipeViewModel.loadRecipesOfUser(authorId = selectedUserId)
+        }
+    }
+
+    val selectedUser by signInViewModel.selectedUserData.collectAsState()
+    val recipes = recipeViewModel.recipesForCards
+
+    if (isLoading) {
+        CircularProgressIndicator()
+    } else {
+        selectedUser?.let { userInfo ->
+            UserProfileContent(
+                userInfo = userInfo,
+                recipes = recipes,
+                navController = navController,
+                isCurrentUser = isCurrentUser,
+                recipeViewModel = recipeViewModel
+            )
+        }
+    }
+
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun UserProfileContent(
+    userInfo: UserForProfile,
+    recipes: List<ResponseFindRecipesForUserDTO>,
+    navController: NavController,
+    isCurrentUser: Boolean,
+    recipeViewModel: RecipeViewModel
+){
+    Column {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    if (userInfo != null) {
-                        ProfileContent(navController = navController, userInfo = userInfo!!)
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.padding(top = 100.dp)
+                ProfileContent(navController = navController, userInfo = userInfo!!)
+                ActionButtonsRow(navController, isCurrentUser)
+            }
+        }
+        LazyColumn {
+            items(
+                items = recipes,
+                key = { item: ResponseFindRecipesForUserDTO -> item.uuid }
+            ) { recipe ->
+                recipe.userLiked?.let {
+                    AppCard(
+                        author = recipe.author,
+                        recipe = recipe.recipe,
+                        likesCount = recipe.likesCount,
+                        commentsCount = recipe.commentsCount,
+                        creationTime = recipe.recipe.creationTime,
+                        isLiked = it,
+                        onLikeClicked = {
+                            if (userInfo != null) {
+                                userInfo.uuid?.let { it1 ->
+                                    recipeViewModel.addLike(recipeId = recipe.uuid,
+                                        authorId = it1
+                                    )
+                                }
+                            }
+                        },
+                        onClick = {
+                            recipeViewModel.updateSelectedRecipeAuthor(recipe.author)
+                            handleCardClick(
+                                navController,
+                                recipeId = recipe.uuid,
+                                likesCount = recipe.likesCount,
+                                commentsCount = recipe.commentsCount,
                             )
-                        }
-                    }
-                    ActionButtonsRow(navController)
+                        },
+                        modifier = Modifier.animateItemPlacement
+                            (
+                            animationSpec = tween(
+                                durationMillis =
+                                600
+                            )
+                        )
+                    )
                 }
             }
         }
-
-//        items(recipeViewModel.recipes) { recipe ->
-//            SavedCards(recipe = recipe) {
-//            }
-//        }
     }
 }
 
 
 @Composable
 fun ProfileContent(
-    userInfo: User,
+    userInfo: UserForProfile,
     navController: NavController
 )  {
-    println("Name: $userInfo")
-    println("Name: $userInfo")
-    println("Name: $userInfo")
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
@@ -110,7 +180,7 @@ fun ProfileContent(
                 .clickable {
                     navController.navigate(NavigationRoutes.EDIT_PROFILE)
                 }) {
-                userInfo.photoURL?.let {
+                userInfo.photo?.let {
                     AppGlideSubcomposition(
                         imageUri = it,
                         modifier = Modifier.clipToBounds()
@@ -124,11 +194,13 @@ fun ProfileContent(
                     .padding(top = 5.dp, end = 10.dp)
             ) {
 
-                Text(
-                        text = userInfo.name,
+                userInfo.name?.let {
+                    Text(
+                        text = it,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
                     )
+                }
                 userInfo.bio?.let {
                     Text(
                         text = it,
@@ -164,7 +236,7 @@ fun ProfileContent(
 
 
 @Composable
-fun ActionButtonsRow(navController: NavController) {
+fun ActionButtonsRow(navController: NavController, isCurrentUser: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -180,6 +252,10 @@ fun ActionButtonsRow(navController: NavController) {
         ActionButtonColumn(buttonText = "Edit Profile",onClickAction = {
             navController.navigate(NavigationRoutes.EDIT_PROFILE) },
              modifier = Modifier.weight(1f))
+
+        if(!isCurrentUser){
+            ActionButtonColumn(buttonText = "Follow", onClickAction = { /*TODO*/ }, modifier = Modifier.weight(1f))
+        }
     }
 }
 

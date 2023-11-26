@@ -57,12 +57,15 @@ import com.example.munchstr.ui.components.AppCheckBox
 import com.example.munchstr.ui.components.AppGlideSubcomposition
 import com.example.munchstr.ui.components.AppNumberingList
 import com.example.munchstr.ui.components.CommentButton
+import com.example.munchstr.ui.components.CommentCard
 import com.example.munchstr.ui.components.LikeButton
 import com.example.munchstr.ui.components.PrepTimeAndCookTime
 import com.example.munchstr.ui.components.SaveButton
 import com.example.munchstr.ui.components.Sharebutton
 import com.example.munchstr.ui.components.UserIconAndName
+import com.example.munchstr.viewModel.CommentViewModel
 import com.example.munchstr.viewModel.RecipeViewModel
+import com.example.munchstr.viewModel.SignInViewModel
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
@@ -70,7 +73,12 @@ import java.util.Locale
 fun RecipeDetails(
     navController: NavHostController,
     recipeViewModel: RecipeViewModel,
-    recipeId: String
+    commentViewModel: CommentViewModel,
+    recipeId: String,
+    likesCount: Int,
+    commentsCount: Int,
+    isLiked: Boolean,
+    signInViewModel: SignInViewModel
 ) {
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
@@ -78,6 +86,9 @@ fun RecipeDetails(
         recipeViewModel.loadSingleRecipe(recipeId)
     }
     val recipe = recipeViewModel.selectedRecipe.value
+    val author = recipeViewModel.selectedRecipeAuthor.value
+    val comments = commentViewModel.comments
+    val userInfo = signInViewModel.userData
 
     val ptrState=
         rememberPullRefreshState(recipeViewModel.isRefreshing.value, {recipeViewModel.loadSingleRecipe(recipeId)})
@@ -175,9 +186,10 @@ fun RecipeDetails(
                                             overflow = TextOverflow.Ellipsis
                                         )
                                     }
-                                    if (recipe != null) {
-                                        UserIconAndName(recipe.name, recipe
-                                            .photo, "Yesterday")
+                                    if (author != null && recipe != null) {
+                                        UserIconAndName(name = author.name,
+                                            photo = author
+                                            .photo, creationTime = recipe.createdAt)
                                     }
                                 }
                                 if (recipe != null) {
@@ -207,21 +219,35 @@ fun RecipeDetails(
                     ) {
                         Row(modifier = Modifier.padding(bottom = 5.dp)) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                LikeButton(tint = Color.Unspecified)
+                                LikeButton(
+                                    tint = Color.Unspecified,
+                                    liked = isLiked,
+                                    onClick = {
+                                        userInfo.value?.let { it1 ->
+                                            recipeViewModel.addLike(recipeId,
+                                                it1.uuid)
+                                        }
+                                    }
+                                    )
                                 Text(
-                                    text = "32 Likes", style = MaterialTheme
+                                    text = likesCount.toString(), style = MaterialTheme
                                         .typography.labelSmall
                                 )
                             }
-                            CommentButton {
+                            CommentButton(modifier = Modifier,
+                            onClick = {
                                 showBottomSheet = true
-                            }
+                                if(commentsCount!=0){
+                                    commentViewModel.updateComments(recipeId = recipeId)
+                                }
+                            })
                             Sharebutton(content = "")
                         }
                         SaveButton {
-                            if (recipe != null) {
+                            if (recipe != null && author != null) {
                                 recipeViewModel
-                                    .insertRecipeToDatabase(recipe = recipe)
+                                    .insertRecipeToDatabase(recipe = recipe,
+                                        author = author)
                             }
                         }
                     }
@@ -246,8 +272,24 @@ fun RecipeDetails(
                                 showBottomSheet = false
                             },
                             sheetState = sheetState,
-                            modifier = Modifier.fillMaxHeight(1f)
+                            modifier = Modifier.fillMaxHeight()
                         ) {
+                            if(comments.isNotEmpty()){
+                                comments.forEachIndexed { index, comment ->
+                                    CommentCard(comment)
+                                    if (index < comments.size - 1) {
+                                        HorizontalDivider()
+                                    }
+                                }
+                            }
+                            else{
+                                Box(
+                                    modifier = Modifier.padding(10.dp),
+                                    contentAlignment = Alignment.TopCenter
+                                    ) {
+                                    Text(text = "No Comments")
+                                }
+                            }
                         }
                     }
                 }

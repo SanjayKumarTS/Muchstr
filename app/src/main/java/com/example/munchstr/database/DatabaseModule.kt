@@ -10,21 +10,28 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 
 @Module
 @InstallIn(ViewModelComponent::class)
-object RecipeDatabaseModule{
+object AppDatabaseModule{
     @Provides
     fun provideRecipeDatabase(@ApplicationContext context: Context):
-            RecipeRoomDatabase {
+            AppRoomDatabase {
         return Room.databaseBuilder(
             context,
-            RecipeRoomDatabase::class.java, "recipe-database"
+            AppRoomDatabase::class.java, "app-database"
         ).build()
     }
 
     @Provides
-    fun provideRecipeDao(database: RecipeRoomDatabase) = database.recipeDao()
+    fun provideRecipeDao(database: AppRoomDatabase) = database.recipeDao()
+
+    @Provides
+    fun provideAuthorDao(database: AppRoomDatabase) = database.AuthorDao()
 
     @Provides
     fun provideRecipeRepository(dao: RecipeDao): RecipeRepository {
         return RecipeRepositoryImpl(dao)
+    }
+    @Provides
+    fun provideAuthorRepository(authorDao: AuthorDao): AuthorRepository {
+        return AuthorRepositoryImpl(authorDao)
     }
 }

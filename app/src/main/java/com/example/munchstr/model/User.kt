@@ -9,3 +9,10 @@ data class User(
     val favorites: List<String>?,
     val bio: String?
 )
+
+data class UserForProfile(
+    val uuid: String?,
+    val name: String?,
+    val photo: String?,
+    val bio: String?
+)
