@@ -16,3 +16,10 @@ data class UserForProfile(
     val photo: String?,
     val bio: String?
 )
+
+data class UserDTO(
+    val name: String,
+    val photo: String,
+    val uuid: String,
+    val bio: String
+)

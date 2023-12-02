@@ -42,7 +42,8 @@ fun MyApp(){
             HomePage(navController = navController, recipeViewModel = recipeViewModel,
                 signInViewModel = signInViewModel)
         }
-        composable("${NavigationRoutes
+        composable("${
+            NavigationRoutes
             .RECIPE_DETAILS_ROUTE}/{recipeId}/{likesCount}/{commentsCount" +
                 "}/{isLiked}",
             arguments = listOf(
@@ -76,12 +77,14 @@ fun MyApp(){
             Log.d("Navigation","To Saved Recipes Screen")
             Bookmarks(navController = navController, recipeViewModel = recipeViewModel)
         }
-        composable(NavigationRoutes.USER_PROFILE){
-            Log.d("Navigation","To User Profile Screen")
+        composable("${NavigationRoutes.USER_PROFILE}/{userId}") { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
             UserProfile(
                 navController = navController,
                 signInViewModel = signInViewModel,
-                recipeViewModel = recipeViewModel
+                recipeViewModel = recipeViewModel,
+                selectedUserId = userId,
+                fandFViewModel= fandFViewModel
             )
         }
         composable(NavigationRoutes.Add_RECIPE){

@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.munchstr.model.CommentDto
+import com.example.munchstr.model.PostComment
 import com.example.munchstr.network.CommentApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -21,6 +22,34 @@ class CommentViewModel @Inject constructor(
 
     private val _isRefreshing = mutableStateOf(false)
     val isRefreshing: State<Boolean> = _isRefreshing
+
+    fun postComment(postComment: PostComment){
+        viewModelScope.launch{
+            try {
+                _isRefreshing.value = true
+                val response = commentApiService.postComments(postComment = postComment)
+                if(response.isSuccessful){
+                    updateComments(postComment.recipeId)
+                }
+                else {
+                    // The server responded with an error
+                    val errorBody = response.errorBody()?.string()
+                    val statusCode = response.code()
+                    if (errorBody.isNullOrEmpty()) {
+                        Log.e("loadRecipes", "Error response with status code: $statusCode")
+                    } else {
+                        Log.e("loadRecipes", "Error response ($statusCode): $errorBody")
+                    }
+                }
+            }catch (e: Exception) {
+                // There was an error performing the HTTP request
+                Log.e("loadRecipes", "Exception occurred: ${e.message}", e)
+            }
+            finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
 
     fun updateComments(recipeId: String){
         viewModelScope.launch{

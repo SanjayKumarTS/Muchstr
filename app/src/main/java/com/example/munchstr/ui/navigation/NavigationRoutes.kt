@@ -9,6 +9,8 @@ object NavigationRoutes {
     const val BOOKMARKS = "Bookmarks"
     const val USER_PROFILE = "UserProfile"
     const val Add_RECIPE = "AddRecipe"
+    const val FOLLOWERS_FOLLOWING = "Followers_following"
+
 
     fun recipeDetailsRoute(
         recipeId: String,

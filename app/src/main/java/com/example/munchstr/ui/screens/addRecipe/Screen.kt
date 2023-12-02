@@ -5,6 +5,7 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
@@ -67,6 +68,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import androidx.navigation.NavHostController
 import com.example.munchstr.model.Ingredient
+import com.example.munchstr.model.Nutrition
 import com.example.munchstr.model.PostRecipe
 import com.example.munchstr.model.Recipe
 import com.example.munchstr.ui.components.AppGlideSubcomposition
@@ -77,12 +79,24 @@ import java.util.UUID
 @Composable
 fun AddRecipe(recipeViewModel: RecipeViewModel, navController:
 NavHostController, signInViewModel: SignInViewModel){
+
     var recipeNameValue by remember { mutableStateOf("") }
+    var isRecipeNameValid by remember { mutableStateOf(true) }
+    var isDescriptionValid by remember { mutableStateOf(true) }
     var recipePrepTime by remember { mutableStateOf("") }
     var recipeCookTime by remember { mutableStateOf("") }
-
     var recipeDescriptionValue by remember { mutableStateOf("") }
     var ingredients = remember { mutableStateListOf<com.example.munchstr.model.Ingredient>() }
+    val nutritionList = remember { mutableStateListOf<Nutrition>() }
+    var instructions = remember { mutableStateOf(listOf<String>()) }
+    var areInstructionsValid by remember { mutableStateOf(true) }
+
+    var isPrepTimeValid by remember { mutableStateOf(true) }
+    var isCookTimeValid by remember { mutableStateOf(true) }
+
+    var areIngredientsValid by remember { mutableStateOf(true) }
+
+
     val imageUrl = recipeViewModel.imageUrl.value
     val navigateToHome by recipeViewModel.navigateToHome.collectAsState()
     val user by signInViewModel.userData.collectAsState()
@@ -90,8 +104,9 @@ NavHostController, signInViewModel: SignInViewModel){
     val categories = listOf("Breakfast", "Lunch", "Curry", "Snacks", "Desserts")
     val selectedCategories = remember { mutableStateListOf<String>() }
 
+
     var currentInstruction by remember { mutableStateOf("") }
-    var instructions = remember { mutableStateOf(listOf<String>()) }
+
 
     LaunchedEffect(navigateToHome) {
         if (navigateToHome) {
@@ -100,6 +115,39 @@ NavHostController, signInViewModel: SignInViewModel){
             recipeViewModel.navigateToHome.value = false
         }
     }
+
+    fun validateIngredients(): Boolean {
+        return ingredients.all {
+            it.name.isNotBlank() && it.quantity.isNotBlank()
+        }
+    }
+
+
+    fun validateInputs(): Boolean {
+
+        isRecipeNameValid = recipeNameValue.isNotBlank()
+        isDescriptionValid = recipeDescriptionValue.isNotBlank()
+        isPrepTimeValid = recipePrepTime.isNotBlank() && recipePrepTime.toIntOrNull() != null
+        isCookTimeValid = recipeCookTime.isNotBlank() && recipeCookTime.toIntOrNull() != null
+
+
+
+        areIngredientsValid = validateIngredients()
+
+        areInstructionsValid = if (instructions.value.size > 1) {
+            instructions.value.drop(1).all { it.isNotBlank() }
+        } else {
+            true
+        }
+        if (imageUrl==null) {
+            Toast.makeText(context, "Please add an image", Toast.LENGTH_SHORT).show()
+        }
+
+
+        return   isRecipeNameValid && isDescriptionValid && areInstructionsValid && isPrepTimeValid && isCookTimeValid && areIngredientsValid && imageUrl!=null
+
+    }
+
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -141,8 +189,7 @@ NavHostController, signInViewModel: SignInViewModel){
                             instructions.value = instructions.value + currentInstruction
                             currentInstruction = ""
                         }
-                        if (validateInputs(recipeNameValue, recipePrepTime,
-                                recipeCookTime, recipeDescriptionValue, ingredients)) {
+                        if (validateInputs()) {
                             val newRecipe = user?.let {
                                 PostRecipe(
                                     uuid = UUID.randomUUID().toString(),
@@ -192,6 +239,7 @@ NavHostController, signInViewModel: SignInViewModel){
                             imagePickerLauncher
                         )
                     })
+
                     .background(
                         color = MaterialTheme.colorScheme.surfaceContainerHigh
                     )
@@ -202,6 +250,17 @@ NavHostController, signInViewModel: SignInViewModel){
                         .fillMaxWidth()
                         .fillMaxHeight())
                 }
+                else{
+                    Image(
+                        painter = painterResource(id = R.drawable.add_a_photo),
+                        contentDescription = "Add Photo",
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(top = 10.dp)
+                    )
+                }
+
+
             }
             Box(modifier = Modifier.padding(vertical = 10.dp, horizontal = 20
                 .dp)){
@@ -219,7 +278,8 @@ NavHostController, signInViewModel: SignInViewModel){
                             .fillMaxWidth()
                             .background(color = MaterialTheme.colorScheme.surfaceContainerHigh),
                         maxLines = 1,
-                        textStyle = MaterialTheme.typography.bodyMedium
+                        textStyle = MaterialTheme.typography.bodyMedium,
+                        isError = !isRecipeNameValid
                     )
                 }
             }
@@ -240,7 +300,8 @@ NavHostController, signInViewModel: SignInViewModel){
                             .background(color = MaterialTheme.colorScheme.surfaceContainerHigh)
                             .height(150.dp),
                         maxLines = 8,
-                        textStyle = MaterialTheme.typography.bodyMedium
+                        textStyle = MaterialTheme.typography.bodyMedium,
+                        isError = !isDescriptionValid
                     )
                 }
             }
@@ -249,40 +310,56 @@ NavHostController, signInViewModel: SignInViewModel){
                 Text("Enter Recipe Steps", style = MaterialTheme.typography.titleMedium)
 
                 instructions.value.forEachIndexed { index, instruction ->
-                    OutlinedTextField(
-                        value = instruction,
-                        onValueChange = { updatedText ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = instruction,
+                            onValueChange = { updatedText ->
+                                val updatedInstructions = instructions.value.toMutableList()
+                                updatedInstructions[index] = updatedText
+                                instructions.value = updatedInstructions
+                            },
+                            label = { Text("Step ${index + 1}") },
+                            modifier = Modifier.weight(1f),
+                            isError = !areInstructionsValid
+                        )
+                        IconButton(onClick = {
                             val updatedInstructions = instructions.value.toMutableList()
-                            updatedInstructions[index] = updatedText
+                            updatedInstructions.removeAt(index)
                             instructions.value = updatedInstructions
-                        },
-                        label = { Text("Step ${index + 1}") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                        }) {
+                            Icon(Icons.Filled.Close, contentDescription = "Remove Step")
+                        }
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                OutlinedTextField(
-                    value = currentInstruction,
-                    onValueChange = { currentInstruction = it },
-                    label = { Text("Step ${instructions.value.size + 1}") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    Button(
-                        onClick = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = currentInstruction,
+                        onValueChange = { currentInstruction = it },
+                        label = { Text("Step ${instructions.value.size + 1}") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (instructions.value.isEmpty() || currentInstruction.isNotBlank()) {
+                        IconButton(onClick = {
                             if (currentInstruction.isNotBlank()) {
                                 instructions.value = instructions.value + currentInstruction
                                 currentInstruction = ""
                             }
+                        }) {
+                            Icon(Icons.Filled.Add, contentDescription = "Add Step")
                         }
-                    ) {
-                        Text("Add Step")
                     }
-
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+
+
             }
 
             Row(modifier = Modifier
@@ -327,7 +404,9 @@ NavHostController, signInViewModel: SignInViewModel){
                             )
                             .width(100.dp),
                         maxLines = 1,
-                        textStyle = MaterialTheme.typography.bodyMedium
+                        textStyle = MaterialTheme.typography.bodyMedium,
+                        isError = !isPrepTimeValid
+
                     )
                 }
 
@@ -368,26 +447,26 @@ NavHostController, signInViewModel: SignInViewModel){
                             )
                             .width(100.dp),
                         maxLines = 1,
-                        textStyle = MaterialTheme.typography.bodyMedium
+                        textStyle = MaterialTheme.typography.bodyMedium,
+                        isError = !isCookTimeValid
                     )
                 }
             }
-            Box(modifier = Modifier.padding(vertical = 10.dp, horizontal = 20
-                .dp)){
+            Box(modifier = Modifier.padding(vertical = 10.dp, horizontal = 20.dp)){
                 Column {
-                    IngredientsList(ingredients = ingredients)
+                    IngredientsList(ingredients = ingredients,  isIngredientsValid = areIngredientsValid)
                 }
             }
 
-
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Select Categories", style = MaterialTheme.typography.titleMedium)
+                Text("Select Category", style = MaterialTheme.typography.titleMedium)
                 categories.forEach { category ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(
                             checked = selectedCategories.contains(category),
                             onCheckedChange = { isChecked ->
                                 if (isChecked) {
+                                    selectedCategories.clear()
                                     selectedCategories.add(category)
                                 } else {
                                     selectedCategories.remove(category)
@@ -398,15 +477,19 @@ NavHostController, signInViewModel: SignInViewModel){
                     }
                 }
             }
-
-
+            Box(modifier = Modifier.padding(vertical = 10.dp, horizontal = 20
+                .dp)){
+                Column {
+                    NutritionList(nutritionList)
+                }
+            }
 
         }
     }
 }
 
 @Composable
-fun IngredientsList(ingredients: MutableList<com.example.munchstr.model.Ingredient>) {
+fun IngredientsList(ingredients: MutableList<com.example.munchstr.model.Ingredient>, isIngredientsValid: Boolean) {
     Column (modifier = Modifier.fillMaxWidth()){
         Text(
             text = "Ingredients",
@@ -414,14 +497,23 @@ fun IngredientsList(ingredients: MutableList<com.example.munchstr.model.Ingredie
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(bottom = 10.dp)
         )
+        if (ingredients.isEmpty() || !isIngredientsValid) {
+            Text(
+                text = if (ingredients.isEmpty()) "Please add at least one ingredient." else "Please enter valid ingredients.",
+                color = androidx.compose.ui.graphics.Color.Red,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp)
+            )
+        }
+
         ingredients.forEachIndexed { index, ingredient ->
             IngredientRow(
                 ingredient = ingredient,
                 onValueChange = { newName, newQuantity, newUnit ->
                     ingredients[index] = ingredient.copy(name = newName, quantity = newQuantity, unit = newUnit)
                 },
+
                 onRemove = {
-                    if (ingredients.size > 1) {
+                    if (ingredients.size > 0) {
                         ingredients.removeAt(index)
                     }
                 }
@@ -568,28 +660,79 @@ fun saveImage(bitmap: Bitmap, context: Context): Uri? {
 
     return Uri.fromFile(file)
 }
-fun validateInputs(
-    recipeName: String,
-    prepTime: String,
-    cookTime: String,
-    description: String,
-    ingredients: List<com.example.munchstr.model.Ingredient>
-): Boolean {
-    if (recipeName.isBlank()) {
-        return false
-    }
 
-    val prepTimeInt = prepTime.toIntOrNull()
-    val cookTimeInt = cookTime.toIntOrNull()
-    if (prepTimeInt == null || cookTimeInt == null || prepTimeInt <= 0 || cookTimeInt <= 0) {
-        return false
-    }
 
-    if (description.isBlank()) {
-        return false
-    }
 
-    return true
+@Composable
+fun NutritionList(nutritionList: MutableList<Nutrition>) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Nutrition",
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(bottom = 10.dp)
+        )
+        nutritionList.forEachIndexed { index, nutrition ->
+            NutritionRow(
+                nutrition = nutrition,
+                onValueChange = { newLabel, newValue, newUnit ->
+                    nutritionList[index] = nutrition.copy(label = newLabel, value = newValue, unit = newUnit)
+                },
+                onRemove = {
+                    if (nutritionList.size > 0) {
+                        nutritionList.removeAt(index)
+                    }
+                }
+            )
+        }
+        IconButton(
+            onClick = {
+                nutritionList.add(Nutrition(label = "", value = "", unit = ""))
+            }, modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Add Nutrition")
+        }
+    }
 }
-
-
+@Composable
+fun NutritionRow(
+    nutrition: Nutrition,
+    onValueChange: (String, String, String) -> Unit,
+    onRemove: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedTextField(
+            value = nutrition.label,
+            onValueChange = { newLabel ->
+                onValueChange(newLabel, nutrition.value, nutrition.unit)
+            },
+            modifier = Modifier.weight(1f),
+            label = { Text("Label") }
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        OutlinedTextField(
+            value = nutrition.value,
+            onValueChange = { newValue ->
+                onValueChange(nutrition.label, newValue, nutrition.unit)
+            },
+            modifier = Modifier.weight(1f),
+            label = { Text("Value") }
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        OutlinedTextField(
+            value = nutrition.unit,
+            onValueChange = { newUnit ->
+                onValueChange(nutrition.label, nutrition.value, newUnit)
+            },
+            modifier = Modifier.weight(1f),
+            label = { Text("Unit") }
+        )
+        IconButton(onClick = onRemove) {
+            Icon(Icons.Default.Close, contentDescription = "Remove Nutrition")
+        }
+    }
+}

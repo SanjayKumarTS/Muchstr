@@ -1,6 +1,5 @@
 package com.example.munchstr.ui.screens.editProfile
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,7 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -25,25 +24,28 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.munchstr.R
 import com.example.munchstr.model.User
+import com.example.munchstr.model.UserDTO
+import com.example.munchstr.model.UserForProfile
 import com.example.munchstr.ui.components.AppGlideSubcomposition
 import com.example.munchstr.ui.navigation.NavigationRoutes
 import com.example.munchstr.viewModel.SignInViewModel
@@ -54,6 +56,9 @@ fun EditProfile(
     signInViewModel: SignInViewModel,
 ){
     val userInfo by signInViewModel.userData.collectAsState()
+    val selectedUser by signInViewModel.selectedUserData.collectAsState()
+
+
     val signOutSuccess by signInViewModel.signOutSuccess.collectAsState()
     if (signOutSuccess) {
         LaunchedEffect(Unit) {
@@ -68,7 +73,7 @@ fun EditProfile(
 
     if (userInfo != null) {
         EditProfileContent(navController = navController, signInViewModel =
-        signInViewModel, userInfo = userInfo!!
+        signInViewModel, userInfo = userInfo!!,selectedUser
         )
     } else {
         CircularProgressIndicator()
@@ -77,9 +82,19 @@ fun EditProfile(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditProfileContent(navController: NavController,
-                       signInViewModel: SignInViewModel, userInfo:User
+fun EditProfileContent(
+    navController: NavController,
+    signInViewModel: SignInViewModel, userInfo: User, selectedUser: UserForProfile?
 ) {
+
+
+
+    var name by remember { mutableStateOf(selectedUser?.name?.let { TextFieldValue(it) }) }
+    var isNameEditable by remember { mutableStateOf(false) }
+    var bio by remember { mutableStateOf(selectedUser?.bio ?: "") }
+    var isBioEditable by remember { mutableStateOf(false) }
+
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -102,8 +117,7 @@ fun EditProfileContent(navController: NavController,
                 },
                 modifier = Modifier
                     .shadow(
-                        elevation = 10
-                            .dp
+                        elevation = 10.dp
                     ),
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
@@ -135,38 +149,11 @@ fun EditProfileContent(navController: NavController,
                 }
             }
             Box (modifier = Modifier.fillMaxWidth()){
-                Row(modifier = Modifier
-                    .padding(30.dp)
-                    .fillMaxWidth(),
-                    verticalAlignment =
-                    Alignment
-                        .CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text(
-                            text = "NAME",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 5.dp)
-                        )
-                        Text(text = userInfo.name)
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Default.KeyboardArrowRight,
-                        contentDescription = "",
-                        tint = Color.DarkGray,
-                        modifier = Modifier.size(35.dp)
-                    )
-                }
-            }
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
-            Box (modifier = Modifier.fillMaxWidth()){
-                Row(modifier = Modifier
-                    .padding(30.dp)
-                    .fillMaxWidth(),
-                    verticalAlignment =
-                    Alignment
-                        .CenterVertically,
+                Row(
+                    modifier = Modifier
+                        .padding(30.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column (modifier = Modifier
@@ -174,19 +161,107 @@ fun EditProfileContent(navController: NavController,
                         .padding(
                             end = 10
                                 .dp
-                        )){
+                        )) {
+
+                        Text(
+                            text = "Name",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(bottom = 5.dp)
+                        )
+
+                        if (isNameEditable) {
+                            name?.let { it1 ->
+                                TextField(
+                                    value = it1,
+                                    onValueChange = { name = it },
+                                    singleLine = true
+                                )
+                            }
+                        } else {
+
+                            name?.let { it1 -> Text(text = it1.text) }
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowRight,
+                        contentDescription = "Name",
+                        tint = Color.DarkGray,
+                        modifier = Modifier
+                            .size(35.dp)
+                            .clickable {
+                                isNameEditable = !isNameEditable
+                                if (!isNameEditable) {
+                                    val updatedUserDto = userInfo.photoURL?.let { it1 ->
+                                        selectedUser?.bio?.let { it2 ->
+                                            name?.let { it3 ->
+                                                UserDTO(
+                                                    name = it3.text,
+                                                    photo = it1,
+                                                    uuid = userInfo.uuid,
+                                                    bio = it2
+                                                )
+                                            }
+                                        }
+                                    }
+                                    if (updatedUserDto != null) {
+                                        signInViewModel.updateUserData(userInfo.uuid, updatedUserDto)
+                                    }
+                                }
+                            }
+                    )
+                }
+            }
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+            Box (modifier = Modifier.fillMaxWidth()){
+                Row(
+                    modifier = Modifier
+                        .padding(30.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 10.dp)) {
                         Text(
                             text = "Bio",
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(bottom = 5.dp)
                         )
-                        Text(text = "Documenting my food journey, one recipe at a time.")
+
+                        if (isBioEditable) {
+                            TextField(
+                                value = bio,
+                                onValueChange = { bio = it },
+                                singleLine = true
+                            )
+                        } else {
+                            Text(text = bio)
+                        }
                     }
+
                     Icon(
-                        imageVector = Icons.AutoMirrored.Default.KeyboardArrowRight,
-                        contentDescription = "",
+                        imageVector = Icons.Default.KeyboardArrowRight,
+                        contentDescription = "Edit Bio",
                         tint = Color.DarkGray,
-                        modifier = Modifier.size(35.dp)
+                        modifier = Modifier
+                            .size(35.dp)
+                            .clickable {
+                                isBioEditable = !isBioEditable
+                                if (!isBioEditable) {
+                                    val updatedUserDto = userInfo.photoURL?.let { it1 ->
+                                        selectedUser?.name?.let { it2 ->
+                                            UserDTO(
+                                                name = it2,
+                                                photo = it1,
+                                                uuid = userInfo.uuid,
+                                                bio = bio
+                                            )
+                                        }
+                                    }
+                                    if (updatedUserDto != null) {
+                                        signInViewModel.updateUserData(userInfo.uuid, updatedUserDto)
+                                    }
+                                }
+                            }
                     )
                 }
             }

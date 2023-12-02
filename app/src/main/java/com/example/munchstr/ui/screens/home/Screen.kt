@@ -67,6 +67,7 @@ fun HomePage(
     val userInfo by signInViewModel.userData.collectAsState()
 
     LaunchedEffect(Unit){
+        recipeViewModel.clearRecipesforCards()
         if(recipes.isEmpty() && !recipeViewModel.isRefreshing.value){
             userInfo?.let { recipeViewModel.loadRecipesForUser(it.uuid) }
             Log.d("HomePage","$userInfo")
@@ -107,9 +108,10 @@ fun HomePage(
                                         (45.dp)
                                     .clip(CircleShape)
                                     .clickable {
-                                    navController.navigate(NavigationRoutes
-                                        .USER_PROFILE)
-                                }) {
+                                        userInfo?.uuid?.let { userId ->
+                                            navController.navigate("${NavigationRoutes.USER_PROFILE}/$userId")
+                                        }
+                                    }) {
                                     userInfo?.photoURL?.let {
                                         AppGlideSubcomposition(
                                             imageUri = it,
@@ -181,6 +183,7 @@ fun HomePage(
                                         commentsCount = recipe.commentsCount,
                                     )
                                 },
+                                navController = navController,
                                 modifier = Modifier.animateItemPlacement
                                     (animationSpec = tween(durationMillis =
                                 600)

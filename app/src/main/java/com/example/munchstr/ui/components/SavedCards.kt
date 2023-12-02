@@ -1,6 +1,5 @@
 package com.example.munchstr.ui.components
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,18 +23,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.munchstr.R
+import androidx.navigation.NavController
 import com.example.munchstr.model.Author
 import com.example.munchstr.model.Recipe
+import com.example.munchstr.ui.navigation.NavigationRoutes
 import com.example.munchstr.utils.formatCreationTime
 
 @Composable
- fun SavedCards(
+fun SavedCards(
     recipe: Recipe,
     onClick: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier=Modifier,
-    author: Author
+    author: Author,
+    navController:NavController
 ){
     ElevatedCard(onClick = onClick , modifier = modifier
         .fillMaxWidth()
@@ -44,7 +45,11 @@ import com.example.munchstr.utils.formatCreationTime
     {
         Box(modifier = Modifier.fillMaxWidth()) {
             UserIconAndName(author.name,author.photo, formatCreationTime
-                (creationTimeString = recipe.createdAt))
+                (creationTimeString = recipe.createdAt),
+                onUserIconClicked = {
+                    navController.navigate("${NavigationRoutes.USER_PROFILE}/${author.uuid}")
+                }
+            )
             IconButton(onClick = { onDelete() },
                 modifier = Modifier.align(Alignment.TopEnd)) {
                 Icon(Icons.Filled.Delete, contentDescription = "Delete")
@@ -71,7 +76,6 @@ import com.example.munchstr.utils.formatCreationTime
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-//                LikeButton(tint = Color(28,27,31))
             }
             Text(
                 text = recipe.description,
@@ -87,19 +91,7 @@ import com.example.munchstr.utils.formatCreationTime
                     .fillMaxWidth()
                     .padding(bottom = 20.dp)) {
                 Row (verticalAlignment = Alignment.CenterVertically){
-//                    Text(
-//                        text = "32 Likes",
-//                        style = MaterialTheme.typography.labelSmall,
-//                        color = MaterialTheme.colorScheme.onSecondaryContainer
-//                    )
-//                    Image(painter = painterResource(id = R.drawable
-//                        .check_indeterminate_small) ,
-//                        contentDescription = "")
-//                    Text(
-//                        text = "12 Comments",
-//                        style = MaterialTheme.typography.labelSmall,
-//                        color = MaterialTheme.colorScheme.onSecondaryContainer
-//                    )
+
                 }
                 Button(onClick =  onClick , colors = ButtonDefaults
                     .buttonColors(
@@ -113,4 +105,3 @@ import com.example.munchstr.utils.formatCreationTime
         }
     }
 }
-

@@ -42,7 +42,8 @@ object NetworkModule {
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
 //            .baseUrl("https://munchstr-backend-nestjs.cyclic.app/")
-            .baseUrl("https://12a5-2603-7081-4af0-9af0-a18e-bd69-9719-ffb4.ngrok-free.app/")
+            .baseUrl("https://a595-2603-7081-47f0-74b0-80cb-b265-be40-a571" +
+                    ".ngrok-free.app/")
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

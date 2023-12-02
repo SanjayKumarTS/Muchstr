@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.example.munchstr.R
 import com.example.munchstr.model.Recipe
@@ -110,9 +111,11 @@ fun Bookmarks(navController: NavHostController, recipeViewModel: RecipeViewModel
                                 onDelete = {
                                     println("OnDelete")
                                     recipeViewModel.deleteRecipeFromDatabase(uuid = recipe.uuid)
-                                },modifier = Modifier.animateItemPlacement
+                                },
+                                modifier = Modifier.animateItemPlacement
                                     (animationSpec = tween(durationMillis =
                                 600))
+                                , navController = navController
                             )
                         }
                     }

@@ -1,5 +1,6 @@
 package com.example.munchstr.ui.screens.recipeDetails
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +37,7 @@ import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,6 +65,7 @@ import com.example.munchstr.ui.components.PrepTimeAndCookTime
 import com.example.munchstr.ui.components.SaveButton
 import com.example.munchstr.ui.components.Sharebutton
 import com.example.munchstr.ui.components.UserIconAndName
+import com.example.munchstr.ui.navigation.NavigationRoutes
 import com.example.munchstr.viewModel.CommentViewModel
 import com.example.munchstr.viewModel.RecipeViewModel
 import com.example.munchstr.viewModel.SignInViewModel
@@ -80,15 +83,26 @@ fun RecipeDetails(
     isLiked: Boolean,
     signInViewModel: SignInViewModel
 ) {
+
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
     LaunchedEffect(Unit){
         recipeViewModel.loadSingleRecipe(recipeId)
     }
+
     val recipe = recipeViewModel.selectedRecipe.value
     val author = recipeViewModel.selectedRecipeAuthor.value
     val comments = commentViewModel.comments
     val userInfo = signInViewModel.userData
+    val savedRecipes by recipeViewModel.savedRecipesFlow.collectAsState(initial = emptyList())
+    val savedAuthors by recipeViewModel.savedAuthorsFlow.collectAsState(initial = emptyList())
+    val selectedRecipeUuid = recipe?.uuid
+    val selectedRecipeAuthorId = author?.uuid
+
+    var isRecipeSaved by remember { mutableStateOf(false) }
+
+    isRecipeSaved = savedRecipes.any { it.uuid == selectedRecipeUuid }
+    val isAuthorSaved = savedAuthors.any { it.uuid == selectedRecipeAuthorId }
 
     val ptrState=
         rememberPullRefreshState(recipeViewModel.isRefreshing.value, {recipeViewModel.loadSingleRecipe(recipeId)})
@@ -120,14 +134,19 @@ fun RecipeDetails(
                                 .dp
                         ),
                     colors = topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
             },
             containerColor = MaterialTheme.colorScheme.background,
             floatingActionButton = {
                 FloatingActionButton(
-                    onClick = { /*TODO*/ }, containerColor =
+                    onClick = {
+                        navController.navigate(NavigationRoutes.Add_RECIPE)
+
+
+
+                    }, containerColor =
                     MaterialTheme.colorScheme.primary
                 ) {
                     Icon(
@@ -187,9 +206,15 @@ fun RecipeDetails(
                                         )
                                     }
                                     if (author != null && recipe != null) {
+
                                         UserIconAndName(name = author.name,
                                             photo = author
-                                            .photo, creationTime = recipe.createdAt)
+                                                .photo, creationTime = recipe.createdAt,
+                                            onUserIconClicked = {
+                                                navController.navigate("${NavigationRoutes.USER_PROFILE}/${author.uuid}")
+                                            }
+                                        )
+
                                     }
                                 }
                                 if (recipe != null) {
@@ -228,28 +253,49 @@ fun RecipeDetails(
                                                 it1.uuid)
                                         }
                                     }
-                                    )
+                                )
                                 Text(
                                     text = likesCount.toString(), style = MaterialTheme
                                         .typography.labelSmall
                                 )
                             }
+
                             CommentButton(modifier = Modifier,
-                            onClick = {
-                                showBottomSheet = true
-                                if(commentsCount!=0){
-                                    commentViewModel.updateComments(recipeId = recipeId)
-                                }
-                            })
+                                onClick = {
+                                    showBottomSheet = true
+                                    if(commentsCount!=0){
+                                        commentViewModel.updateComments(recipeId = recipeId)
+                                    }
+                                })
                             Sharebutton(content = "")
                         }
-                        SaveButton {
-                            if (recipe != null && author != null) {
-                                recipeViewModel
-                                    .insertRecipeToDatabase(recipe = recipe,
-                                        author = author)
+                        SaveButton(
+                            isRecipeSaved = isRecipeSaved,
+                            onSave = {
+                                Log.d("SaveButton", "onSave triggered")
+                                if (!isAuthorSaved) {
+                                    recipe?.let { rcp ->
+                                        author?.let { athr ->
+                                            Log.d("SaveButton", "Saving recipe and author")
+                                            recipeViewModel.insertRecipeToDatabase(recipe = rcp, author = athr)
+                                            isRecipeSaved = true
+
+                                        }
+                                    }
+                                }
+                            },
+                            onDelete = {
+                                Log.d("SaveButton", "onDelete triggered")
+                                if (isAuthorSaved) {
+                                    recipe?.uuid?.let { it1 ->
+                                        recipeViewModel.deleteRecipeFromDatabase(
+                                            it1
+                                        )
+                                    }
+                                    isRecipeSaved = false
+                                }
                             }
-                        }
+                        )
                     }
                     HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
                     Column(modifier = Modifier.padding(10.dp)) {
@@ -286,7 +332,7 @@ fun RecipeDetails(
                                 Box(
                                     modifier = Modifier.padding(10.dp),
                                     contentAlignment = Alignment.TopCenter
-                                    ) {
+                                ) {
                                     Text(text = "No Comments")
                                 }
                             }
@@ -419,9 +465,3 @@ fun NutrientLabel(nutrientName: String, amount: String) {
         }
     }
 }
-
-//@Composable
-//@Preview(showBackground = true)
-//fun RecipeDetailsPreview() {
-//    RecipeDetails(navController, it.arguments?.getString("recipeId"))
-//}

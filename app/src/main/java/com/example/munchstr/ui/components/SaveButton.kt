@@ -8,10 +8,19 @@ import androidx.compose.ui.res.painterResource
 import com.example.munchstr.R
 
 @Composable
-fun SaveButton(onClick: () -> Unit){
-    IconButton(onClick =  onClick) {
-        Icon(painter = painterResource(id = R.drawable.bookmark_add),
-            contentDescription =
-        "Bookmark")
+fun SaveButton(isRecipeSaved: Boolean, onSave: () -> Unit, onDelete: () -> Unit) {
+    IconButton(onClick = {
+        if (isRecipeSaved) {
+            onDelete()
+        } else {
+            onSave()
+        }
+    }) {
+        if (isRecipeSaved) {
+            Icon(painter = painterResource(id = R.drawable.baseline_bookmark_added_24),
+                contentDescription = "Unsave")
+        } else {
+            Icon(painter = painterResource(id = R.drawable.bookmark_add), contentDescription = "Save")
+        }
     }
 }

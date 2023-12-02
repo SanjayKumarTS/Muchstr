@@ -17,6 +17,7 @@ import com.example.munchstr.model.GoogleSignInToken
 import com.example.munchstr.model.ResponseFindRecipesForUserDTO
 import com.example.munchstr.model.SignInState
 import com.example.munchstr.model.User
+import com.example.munchstr.model.UserDTO
 import com.example.munchstr.model.UserForProfile
 import com.example.munchstr.network.AuthApiService
 import com.example.munchstr.network.FollowersAndFollowingApiService
@@ -225,6 +226,23 @@ class SignInViewModel @Inject constructor(
         }
     }
 
+    fun updateUserData(uuid: String, userDTO: UserDTO) {
+        Log.i("updateUserData", "Updating user: $uuid")
+        viewModelScope.launch {
+            try {
+                val response = authApiService.updateUser(uuid, userDTO)
+                if (response.isSuccessful) {
+                    Log.i("updateUserData", "User successfully updated")
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    val statusCode = response.code()
+                    Log.e("updateUserData", "Error response ($statusCode): $errorBody")
+                }
+            } catch (e: Exception) {
+                Log.e("updateUserData", "Exception occurred: ${e.message}", e)
+            }
+        }
+    }
     fun resetSignOutSuccess() {
         _signOutSuccess.value = false
     }

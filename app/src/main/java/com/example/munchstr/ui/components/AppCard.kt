@@ -1,9 +1,12 @@
 package com.example.munchstr.ui.components
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,15 +20,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.example.munchstr.R
 import com.example.munchstr.model.Author
 import com.example.munchstr.model.RecipeInCards
+import com.example.munchstr.ui.navigation.NavigationRoutes
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun AppCard(
     recipe: RecipeInCards,
@@ -35,14 +40,24 @@ fun AppCard(
     commentsCount: Int,
     creationTime: String,
     author: Author,
-    isLiked: Boolean, // Add this
-    onLikeClicked: (Boolean) -> Unit
+    isLiked: Boolean,
+    onLikeClicked: (Boolean) -> Unit,
+    navController:NavController
 ) {
     ElevatedCard(onClick = onClick , modifier = modifier
         .fillMaxWidth()
         .padding(15.dp)
     ) {
-        UserIconAndName(author.name,author.photo, creationTime)
+
+        UserIconAndName(
+            name = author.name,
+            photo = author.photo,
+            creationTime = creationTime,
+            onUserIconClicked = {
+                navController.navigate("${NavigationRoutes.USER_PROFILE}/${author.uuid}")
+            }
+        )
+
         Box(
             modifier = Modifier
                 .height(200.dp)
@@ -62,7 +77,8 @@ fun AppCard(
                     .titleLarge,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
                 LikeButton(
                     tint = Color(28,27,31),

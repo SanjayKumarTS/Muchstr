@@ -1,5 +1,6 @@
 package com.example.munchstr.ui.components
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -25,37 +27,41 @@ import com.example.munchstr.model.RecipeInCards
 import com.example.munchstr.utils.formatCreationTime
 
 @Composable
-fun UserIconAndName(name:String, photo:String, creationTime: String) {
-    Row (modifier = Modifier
-        .height(IntrinsicSize.Max)
-        .padding(10.dp)){
+fun UserIconAndName(name:String, photo:String, creationTime: String,  onUserIconClicked: () -> Unit) {
+
+    Row(
+        modifier = Modifier
+            .height(IntrinsicSize.Max)
+            .padding(10.dp)
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { onUserIconClicked() })
+            }
+    )
+
+    {
         Box(modifier = Modifier
             .width(45.dp)
             .height
                 (45.dp)
             .clip(CircleShape)
             .clipToBounds()) {
+
             AppGlideSubcomposition(imageUri = photo)
+
         }
         Column(modifier = Modifier
             .fillMaxHeight()
             .padding(start = 10.dp),
             verticalArrangement =
-        Arrangement
-            .SpaceEvenly) {
+            Arrangement
+                .SpaceEvenly) {
             Text(text = name, style = MaterialTheme
                 .typography.titleSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
             Text(text = formatCreationTime(creationTime), style = MaterialTheme
                 .typography
                 .bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface)
+                color = MaterialTheme.colorScheme.onSurface)
 
         }
     }
 }
-
-//@Composable
-//@Preview(showBackground = true)
-//fun UserIconAndNamePreview(){
-//    UserIconAndName(recipe, creationTime)
-//}

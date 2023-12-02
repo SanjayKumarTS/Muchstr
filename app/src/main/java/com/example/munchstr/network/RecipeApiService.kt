@@ -2,7 +2,6 @@ package com.example.munchstr.network
 
 import com.example.munchstr.model.CreateLikeDto
 import com.example.munchstr.model.PostRecipe
-import com.example.munchstr.model.Recipe
 import com.example.munchstr.model.RecipeResponse
 import com.example.munchstr.model.ResponseFindRecipesForUserDTO
 import retrofit2.Response
@@ -55,4 +54,7 @@ interface RecipeApiService {
 
     @GET("recipe/searchRecipe/{name}")
     suspend fun searchRecipe(@Path("name") name: String): Response<List<ResponseFindRecipesForUserDTO>>
+    @GET("recipe/searchRecipeByCategory/{name}")
+    suspend fun searchRecipeByCategory(@Path("name") name: String): Response<List<ResponseFindRecipesForUserDTO>>
+
 }

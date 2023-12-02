@@ -1,6 +1,7 @@
 package com.example.munchstr.ui.screens.userProfile
 
 
+import android.util.Log
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -10,16 +11,26 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,11 +38,15 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.munchstr.R
 import com.example.munchstr.model.ResponseFindRecipesForUserDTO
 import com.example.munchstr.model.UserForProfile
@@ -39,6 +54,7 @@ import com.example.munchstr.ui.components.AppCard
 import com.example.munchstr.ui.components.AppGlideSubcomposition
 import com.example.munchstr.ui.navigation.NavigationRoutes
 import com.example.munchstr.ui.screens.home.handleCardClick
+import com.example.munchstr.viewModel.FAndFViewModel
 import com.example.munchstr.viewModel.RecipeViewModel
 import com.example.munchstr.viewModel.SignInViewModel
 
@@ -48,24 +64,18 @@ fun UserProfile(
     navController: NavController,
     signInViewModel: SignInViewModel,
     recipeViewModel:RecipeViewModel,
-    selectedUserId: String=""
+    selectedUserId: String="",
+    fandFViewModel:FAndFViewModel
 ) {
     val user by signInViewModel.userData.collectAsState()
-    val isCurrentUser = selectedUserId.isEmpty()
-
+    val isCurrentUser =  selectedUserId == user?.uuid
     val isLoading by signInViewModel.isRefreshing
 
     LaunchedEffect(selectedUserId) {
-        if (isCurrentUser) {
-            user?.uuid?.let { uuid ->
-                signInViewModel.loadSelectedUserData(uuid)
-                recipeViewModel.loadRecipesOfUser(authorId = uuid)
-            }
-        } else {
-            signInViewModel.loadSelectedUserData(selectedUserId)
-            recipeViewModel.loadRecipesOfUser(authorId = selectedUserId)
-        }
+        signInViewModel.loadSelectedUserData(selectedUserId)
+        recipeViewModel.loadRecipesOfUser(authorId = selectedUserId)
     }
+
 
     val selectedUser by signInViewModel.selectedUserData.collectAsState()
     val recipes = recipeViewModel.recipesForCards
@@ -79,7 +89,10 @@ fun UserProfile(
                 recipes = recipes,
                 navController = navController,
                 isCurrentUser = isCurrentUser,
-                recipeViewModel = recipeViewModel
+                recipeViewModel = recipeViewModel,
+                FAndFViewModel = fandFViewModel,
+                selectedUserId = selectedUserId,
+                signInViewModel = signInViewModel
             )
         }
     }
@@ -93,7 +106,10 @@ fun UserProfileContent(
     recipes: List<ResponseFindRecipesForUserDTO>,
     navController: NavController,
     isCurrentUser: Boolean,
-    recipeViewModel: RecipeViewModel
+    recipeViewModel: RecipeViewModel,
+    FAndFViewModel: FAndFViewModel,
+    selectedUserId: String,
+    signInViewModel: SignInViewModel
 ){
     Column {
         Card(
@@ -108,7 +124,7 @@ fun UserProfileContent(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 ProfileContent(navController = navController, userInfo = userInfo!!)
-                ActionButtonsRow(navController, isCurrentUser)
+                ActionButtonsRow(navController, isCurrentUser,userInfo,FAndFViewModel,selectedUserId,signInViewModel)
             }
         }
         LazyColumn {
@@ -142,6 +158,7 @@ fun UserProfileContent(
                                 commentsCount = recipe.commentsCount,
                             )
                         },
+                        navController = navController,
                         modifier = Modifier.animateItemPlacement
                             (
                             animationSpec = tween(
@@ -166,7 +183,6 @@ fun ProfileContent(
         modifier = Modifier
             .fillMaxWidth()
     ) {
-        val dynamicSize = with(LocalDensity.current) { constraints.maxWidth.toDp() * 0.13f }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -187,13 +203,12 @@ fun ProfileContent(
                     )
                 }
             }
-            Spacer(modifier = Modifier.weight(0.2f))
+            Spacer(modifier = Modifier.weight(0.075f))
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .padding(top = 5.dp, end = 10.dp)
             ) {
-
                 userInfo.name?.let {
                     Text(
                         text = it,
@@ -211,15 +226,14 @@ fun ProfileContent(
 
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Image(
-                        painter = painterResource(id = R.drawable.bookmarks),
-                        contentDescription = "Collections",
-                        modifier = Modifier
-                            .size(dynamicSize)
-                            .clickable {
-                                navController.navigate(NavigationRoutes.BOOKMARKS)
-                            }
-                    )
+                Image(
+                    painter = painterResource(id = R.drawable.bookmarks),
+                    contentDescription = "Collections",
+                    modifier = Modifier
+                        .clickable {
+                            navController.navigate(NavigationRoutes.BOOKMARKS)
+                        }
+                )
 
                 Text(
                     text = "Collections",
@@ -235,35 +249,262 @@ fun ProfileContent(
 }
 
 
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
-fun ActionButtonsRow(navController: NavController, isCurrentUser: Boolean) {
+fun ActionButtonsRow(
+    navController: NavController,
+    isCurrentUser: Boolean,
+    userInfo: UserForProfile,
+    fAndFViewModel: FAndFViewModel,
+    selectedUserId: String,
+    signInViewModel: SignInViewModel
+) {
+
+    val followersCount = fAndFViewModel.followersAndFollowing.value?.followers?.size
+
+    val followingCount = fAndFViewModel.followersAndFollowing.value?.following?.size
+
+    val userId = signInViewModel.userData.value?.uuid
+
+    val targetId= selectedUserId
+
+    Log.d("UserProfileScreen","$targetId")
+    fAndFViewModel.updateFollowersAndFollowing(targetId)
+    fAndFViewModel.followersAndFollowing.value?.following
+
+
+    var isFollowing by remember { mutableStateOf(fAndFViewModel.followersAndFollowing.value?.following?.any { it.uuid == targetId } == true) }
+
+    val showFollowersSheet = remember { mutableStateOf(false) }
+
+    val showFollowingSheet = remember { mutableStateOf(false) }
+
+    val followersSheetState =  rememberModalBottomSheetState()
+
+    val followingSheetState = rememberModalBottomSheetState()
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        ActionButtonColumn(buttonText = "Followers", count = "23", onClickAction = {}, modifier = Modifier.weight(1f))
+
+        ActionButtonColumn(
+            buttonText = "Followers",
+            count = followersCount,
+            onClickAction = { showFollowersSheet.value = true },
+            modifier = Modifier.weight(1f)
+        )
+
         Spacer(modifier = Modifier.weight(0.2f))
 
-        ActionButtonColumn(buttonText = "Following", count = "41", onClickAction = {}, modifier = Modifier.weight(1f))
+
+        ActionButtonColumn(
+            buttonText = "Following",
+            count = followingCount,
+            onClickAction = { showFollowingSheet.value = true },
+            modifier = Modifier.weight(1f)
+        )
+
         Spacer(modifier = Modifier.weight(0.2f))
 
-        ActionButtonColumn(buttonText = "Edit Profile",onClickAction = {
-            navController.navigate(NavigationRoutes.EDIT_PROFILE) },
-             modifier = Modifier.weight(1f))
+        if(isCurrentUser) {
+            ActionButtonColumn(
+                buttonText = "Edit Profile", count = null, onClickAction = {
+                    navController.navigate(NavigationRoutes.EDIT_PROFILE)
+                },
+                modifier = Modifier.weight(1.2f)
+            )
+        }
+
+        Spacer(modifier = Modifier.weight(0.2f))
 
         if(!isCurrentUser){
-            ActionButtonColumn(buttonText = "Follow", onClickAction = { /*TODO*/ }, modifier = Modifier.weight(1f))
+            val buttonText = if (isFollowing) "Unfollow" else "Follow"
+
+            ActionButtonColumn(buttonText = buttonText, count =null,
+                onClickAction = {
+                    userId?.let { uid ->
+                        isFollowing = !isFollowing
+
+                        if (isFollowing) {
+                            fAndFViewModel.addFollow(uid, targetId)
+                        } else {
+                            fAndFViewModel.unfollow(uid, targetId)
+                        }
+                    }
+                },
+                modifier = Modifier.weight(1f))
+        }
+
+    }
+    FollowersBottomSheet(showFollowersSheet, followersSheetState, fAndFViewModel)
+    FollowingBottomSheet(showFollowingSheet, followingSheetState, fAndFViewModel)
+
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
+@Composable
+fun FollowersBottomSheet(
+    showFollowersSheet: MutableState<Boolean>,
+    sheetState: SheetState,
+    FAndFViewModel: FAndFViewModel
+) {
+    if (showFollowersSheet.value) {
+        val followers = FAndFViewModel.followersAndFollowing.value?.followers ?: listOf()
+
+        ModalBottomSheet(
+            onDismissRequest = { showFollowersSheet.value = false },
+            sheetState = sheetState,
+            modifier = Modifier.fillMaxHeight()
+        ) {
+            if (followers.isNotEmpty()) {
+                followers.forEachIndexed { index, follower ->
+                    FollowerCard(follower)
+                    if (index < followers.size - 1) {
+                        HorizontalDivider()
+                    }
+                }
+            } else {
+                EmptyContentBox("No Followers")
+            }
+        }
+    }
+}
+
+@Composable
+fun FollowerCard(follower: UserForProfile) {
+    if (follower.name != null && follower.photo != null) {
+        Row(
+            modifier = Modifier
+                .padding(5.dp)
+                .fillMaxWidth()
+                .height(IntrinsicSize.Max)
+                .clip(shape = RoundedCornerShape(10.dp))
+                .clipToBounds()
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(5.dp)
+                    .size(45.dp)
+                    .clip(CircleShape)
+                    .clipToBounds()
+            ) {
+                AppGlideSubcomposition(
+                    imageUri = follower.photo
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .padding(start = 10.dp)
+                    .align(Alignment.CenterVertically)
+                    .weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = follower.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+        }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
+@Composable
+fun FollowingBottomSheet(
+    showFollowingSheet: MutableState<Boolean>,
+    sheetState: SheetState,
+    FAndFViewModel: FAndFViewModel
+) {
+    if (showFollowingSheet.value) {
+        val following = FAndFViewModel.followersAndFollowing.value?.following ?: listOf()
+
+        ModalBottomSheet(
+            onDismissRequest = { showFollowingSheet.value = false },
+            sheetState = sheetState,
+            modifier = Modifier.fillMaxHeight()
+        ) {
+            if (following.isNotEmpty()) {
+                following.forEachIndexed { index, follow ->
+                    FollowingCard(follow)
+                    if (index < following.size - 1) {
+                        HorizontalDivider()
+                    }
+                }
+            } else {
+                EmptyContentBox("No Following")
+            }
+        }
+    }
+}
+
+@Composable
+fun FollowingCard(follow: UserForProfile) {
+    Row(
+        modifier = Modifier
+            .padding(5.dp)
+            .fillMaxWidth()
+            .height(IntrinsicSize.Max)
+            .clip(RoundedCornerShape(10.dp))
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(5.dp)
+                .size(45.dp)
+                .clip(CircleShape)
+        ) {
+
+            follow.photo?.let {
+                AppGlideSubcomposition(
+                    imageUri = it
+                )
+            }
+        }
+        Column(
+            modifier = Modifier
+                .padding(start = 10.dp)
+                .align(Alignment.CenterVertically)
+                .weight(1f),
+            verticalArrangement = Arrangement.Center
+        ) {
+            if (follow.name != null) {
+                Text(
+                    text = follow.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+            if (follow.bio != null) {
+                Text(
+                    text = follow.bio,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 }
 
 
 @Composable
+fun EmptyContentBox(text: String) {
+    Box(
+        modifier = Modifier.padding(10.dp),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Text(text = text)
+    }
+}
+
+@Composable
 fun ActionButtonColumn(
     buttonText: String,
-    count: String = "",
+    count: Int?,
     onClickAction: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -295,13 +536,27 @@ fun ActionButtonColumn(
             )
         }
 
-        if (count.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(2.dp))
+
+        Spacer(modifier = Modifier.height(2.dp))
+        if (count !=null) {
             Text(
-                text = count,
+                text = "$count",
                 style = MaterialTheme.typography.titleSmall
             )
         }
 
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ProfileContentPreview(){
+    ProfileContent(navController = rememberNavController() , userInfo = UserForProfile(
+        uuid = "123",
+        bio = "This bio is short and to the point, but it also conveys the " +
+                "blogger's passion for food and cooking.",
+        name = "Sanjay",
+        photo = "https://lh3.googleusercontent.com/a/ACg8ocL6XmFlx179WwRBsXyuG7N3-8sMmyKUwVor3fgDuhCfUQ=s96-c"
+        )
+    )
 }
