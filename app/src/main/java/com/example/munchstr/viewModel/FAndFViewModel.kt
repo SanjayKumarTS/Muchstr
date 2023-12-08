@@ -24,11 +24,6 @@ class FAndFViewModel @Inject constructor(
     private val _isRefreshing = mutableStateOf(false)
     val isRefreshing: State<Boolean> = _isRefreshing
 
-
-
-
-
-
     fun unfollow(userId: String, targetUserId: String){
         viewModelScope.launch{
             try {
@@ -37,6 +32,7 @@ class FAndFViewModel @Inject constructor(
                 )
                 if(response.isSuccessful){
                     Log.i("UnFollowed","Following")
+                    updateFollowersAndFollowing(uuid = userId)
                 }
                 else {
                     // The server responded with an error
@@ -65,6 +61,7 @@ class FAndFViewModel @Inject constructor(
                 )
                 if(response.isSuccessful){
                     Log.i("Followed","Following")
+                    updateFollowersAndFollowing(uuid = userId)
                 }
                 else {
                     // The server responded with an error

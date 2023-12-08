@@ -28,7 +28,6 @@ import com.example.munchstr.utils.formatCreationTime
 
 @Composable
 fun UserIconAndName(name:String, photo:String, creationTime: String,  onUserIconClicked: () -> Unit) {
-
     Row(
         modifier = Modifier
             .height(IntrinsicSize.Max)

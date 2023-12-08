@@ -1,62 +1,80 @@
 package com.example.munchstr.ui.components
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.example.munchstr.R
 import com.example.munchstr.model.Author
 import com.example.munchstr.model.RecipeInCards
 import com.example.munchstr.ui.navigation.NavigationRoutes
+import com.example.munchstr.viewModel.RecipeViewModel
 
 @Composable
 fun AppCard(
     recipe: RecipeInCards,
     onClick: () -> Unit,
     modifier: Modifier,
-    likesCount: Int,
-    commentsCount: Int,
+    uuid:String,
+    recipeViewModel:RecipeViewModel,
     creationTime: String,
     author: Author,
     isLiked: Boolean,
+    showDelete: Boolean = false,
     onLikeClicked: (Boolean) -> Unit,
     navController:NavController
 ) {
+
+    val allLikesComments = recipeViewModel.allLikesResponse.collectAsState()
+    val specificLikesComments = allLikesComments.value.firstOrNull { it.recipeId == uuid }
+    val likesCount = specificLikesComments?.likes?.size ?: 0
+    val commentsCount = specificLikesComments?.comments?.size ?: 0
+
     ElevatedCard(onClick = onClick , modifier = modifier
         .fillMaxWidth()
         .padding(15.dp)
     ) {
 
-        UserIconAndName(
-            name = author.name,
-            photo = author.photo,
-            creationTime = creationTime,
-            onUserIconClicked = {
-                navController.navigate("${NavigationRoutes.USER_PROFILE}/${author.uuid}")
+        Box(modifier = Modifier.fillMaxWidth()) {
+            UserIconAndName(
+                name = author.name,
+                photo = author.photo,
+                creationTime = creationTime,
+                onUserIconClicked = {
+                    navController.navigate("${NavigationRoutes.USER_PROFILE}/${author.uuid}")
+                }
+            )
+            if (showDelete) {
+                IconButton(
+                    onClick = { recipeViewModel.deleteRecipeforUser(uuid) },
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Icon(Icons.Filled.Delete, contentDescription = "Delete")
+                }
             }
-        )
+        }
 
         Box(
             modifier = Modifier
@@ -114,7 +132,7 @@ fun AppCard(
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
-                Button(onClick = { onClick }, colors = ButtonDefaults
+                Button(onClick = onClick , colors = ButtonDefaults
                     .buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,

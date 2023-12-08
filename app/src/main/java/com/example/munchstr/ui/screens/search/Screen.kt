@@ -3,6 +3,7 @@ package com.example.munchstr.ui.screens.search
 import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -25,11 +27,13 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,7 +42,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.toLowerCase
 import com.example.munchstr.R
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -59,8 +65,16 @@ RecipeViewModel, signInViewModel: SignInViewModel) {
     val userProfiles = signInViewModel.searchUserData
     val recipedata = recipeViewModel.recipesForCards
     val currentuser = signInViewModel.userData
-    var isRecipeButtonPressed by remember { mutableStateOf(false) }
-    var isPeopleButtonPressed by remember { mutableStateOf(false) }
+
+    val allButtons = listOf(
+        "People", "Recipes", "Breakfast", "Lunch", "Snacks", "Desserts"
+    )
+
+    val lazyState = rememberLazyListState()
+
+
+    val selectedCategory = recipeViewModel.selectedCategory.collectAsState().value
+
 
     LaunchedEffect(Unit){
         Log.d("SearchScreen", "Cleared")
@@ -74,6 +88,7 @@ RecipeViewModel, signInViewModel: SignInViewModel) {
                 navigationIcon = {
                     IconButton(onClick = {
                         navController.popBackStack()
+                        signInViewModel.clearSearchUserData()
                     }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -88,7 +103,7 @@ RecipeViewModel, signInViewModel: SignInViewModel) {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         SearchBar(
-
+                            recipeViewModel= recipeViewModel,
                             searchString = searchedString,
                             onSearchChanged = { newValue ->
                                 searchedString = newValue
@@ -125,10 +140,56 @@ RecipeViewModel, signInViewModel: SignInViewModel) {
         content =
         { innerPadding ->
             Column(modifier = Modifier.padding(innerPadding)) {
+                if (userProfiles.isNotEmpty() || recipedata.isNotEmpty()) {
+                    val buttonsToShow = if (recipeViewModel.selectedButton.value == false) {
+                        allButtons.drop(2)
+                    } else {
+                        allButtons.dropLast(4)
+                    }
+                    buttonsToShow.chunked(3).forEach { rowButtons ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            rowButtons.forEach { label ->
+                                OutlinedButton(
+                                    onClick = {
+                                        if (label != "People" && label != "Recipes") {
+                                            if (recipeViewModel.selectedCategory.value != label) {
+                                                recipeViewModel.searchRecipesbyCategory(label)
+                                                recipeViewModel.selectCategory(label)
+                                            } else {
+                                                recipeViewModel.selectCategory("")
+                                            }
+                                        } else {
+                                            if (recipeViewModel.selectedCategory.value != label) {
+
+                                                recipeViewModel.selectCategory(label)
+
+                                            } else {
+                                                recipeViewModel.selectCategory("")
+                                            }
+                                        }
+                                    },
+                                    border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = if (selectedCategory == label && selectedCategory!="")
+                                            MaterialTheme.colorScheme.primary
+                                        else
+                                            MaterialTheme.colorScheme.onSurface
+                                    )
+                                ) {
+                                    Text(label)
+                                }
+                            }
+                        }
+                    }
+                }
 
                 if (userProfiles.isNotEmpty() || recipedata.isNotEmpty()) {
                     LazyColumn {
-                        if (userProfiles.isNotEmpty()) {
+                        if (userProfiles.isNotEmpty() && recipeViewModel.selectedCategory.value != "Recipes") {
                             itemsIndexed(items = userProfiles) { index, userProfile ->
                                 UserProfileCard(
                                     name = userProfile.name ?: "",
@@ -141,7 +202,7 @@ RecipeViewModel, signInViewModel: SignInViewModel) {
                             }
                         }
 
-                        if (recipedata.isNotEmpty()) {
+                        if (recipedata.isNotEmpty() && recipeViewModel.selectedCategory.value != "People" ) {
                             items(
                                 items = recipedata,
                                 key = { item: ResponseFindRecipesForUserDTO -> item.uuid }
@@ -150,13 +211,22 @@ RecipeViewModel, signInViewModel: SignInViewModel) {
                                     AppCard(
                                         author = recipe.author,
                                         recipe = recipe.recipe,
-                                        likesCount = recipe.likesCount,
-                                        commentsCount = recipe.commentsCount,
+                                        uuid= recipe.uuid,
+                                        recipeViewModel = recipeViewModel,
                                         creationTime = recipe.recipe.creationTime,
                                         isLiked = isLiked,
                                         onLikeClicked = {
                                             currentuser.value?.uuid?.let { userId ->
-                                                recipeViewModel.addLike(recipe.uuid, userId)
+                                                val index = recipedata.indexOf(recipe)
+                                                if(recipe.userLiked!!){
+                                                    recipeViewModel.removeLike(recipe.uuid, userId)
+                                                    recipedata[index].userLiked=false
+                                                }
+                                                else {
+                                                    recipeViewModel.addLike(recipe.uuid, userId)
+                                                    recipedata[index].userLiked=true
+
+                                                }
                                             }
                                         },
                                         onClick = {
@@ -177,30 +247,11 @@ RecipeViewModel, signInViewModel: SignInViewModel) {
                     }
                 } else {
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start
-                    ) {
-                        Button(
-                            onClick = { isRecipeButtonPressed = !isRecipeButtonPressed },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isRecipeButtonPressed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                            )
-                        ) {
-                            Text("Recipe")
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = { isPeopleButtonPressed = !isPeopleButtonPressed },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isPeopleButtonPressed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                            )
-                        ) {
-                            Text("People")
-                        }
-                    }
-                    DefaultCategoriesLayout()
+
+                    DefaultCategoriesLayout(
+                        recipeViewModel = recipeViewModel,
+                        onCategorySelected = { category -> recipeViewModel.searchRecipesbyCategory(category) }
+                    )
                 }
             }
         })
@@ -211,9 +262,12 @@ RecipeViewModel, signInViewModel: SignInViewModel) {
 
 
 
+
 @Composable
-fun DefaultCategoriesLayout() {
-    var selectedCategory by remember { mutableStateOf<String?>(null) }
+fun DefaultCategoriesLayout(
+    recipeViewModel: RecipeViewModel,
+    onCategorySelected: (String) -> Unit
+)    {var selectedCategory by remember { mutableStateOf<String?>(null) }
 
 
     Column(
@@ -237,7 +291,10 @@ fun DefaultCategoriesLayout() {
                 modifier = Modifier
                     .weight(1f)
                     .height(IntrinsicSize.Min),
-                onClick = { selectedCategory = "Breakfast" },
+                onClick = { recipeViewModel.selectCategory("Breakfast")
+                    onCategorySelected("Breakfast")
+                    recipeViewModel.selectbutton(false)
+                },
                 skillet = R.drawable.breakfast_dining
             )
 
@@ -248,7 +305,11 @@ fun DefaultCategoriesLayout() {
                 modifier = Modifier
                     .weight(1f)
                     .height(IntrinsicSize.Min),
-                onClick = { selectedCategory = "Lunch" },
+                onClick = {recipeViewModel.selectCategory("Lunch")
+                    onCategorySelected("Lunch")
+                    recipeViewModel.selectbutton(false)
+
+                },
                 skillet = R.drawable.ramen_dining
             )
         }
@@ -262,7 +323,10 @@ fun DefaultCategoriesLayout() {
                 modifier = Modifier
                     .weight(1f)
                     .height(IntrinsicSize.Min),
-                onClick = { selectedCategory = "Curry" },
+                onClick = {
+                    recipeViewModel.selectCategory("Curry")
+                    recipeViewModel.selectbutton(false)
+                    selectedCategory = "Curry" },
                 R.drawable.skillet
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -272,7 +336,11 @@ fun DefaultCategoriesLayout() {
                 modifier = Modifier
                     .weight(1f)
                     .height(IntrinsicSize.Min),
-                onClick = { selectedCategory = "Snacks" },
+                onClick = { recipeViewModel.selectCategory("Snacks")
+                    onCategorySelected("Snacks")
+                    recipeViewModel.selectbutton(false)
+
+                },
                 skillet = R.drawable.icecream
             )
         }
@@ -284,7 +352,10 @@ fun DefaultCategoriesLayout() {
                 modifier = Modifier
                     .weight(1f)
                     .height(IntrinsicSize.Min),
-                onClick = { selectedCategory = "Desserts" },
+                onClick = { recipeViewModel.selectCategory("Desserts")
+                    onCategorySelected("Desserts")
+                    recipeViewModel.selectbutton(false)
+                },
                 skillet = R.drawable.cake
             )
         }
@@ -318,33 +389,9 @@ fun CategoryCard(
             Image(
                 painter = painterResource(id = skillet),
                 contentDescription = "$categoryName Image",
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(24.dp),
+                colorFilter = ColorFilter.tint(Color.Black)
             )
-        }
-    }
-}
-
-@Composable
-fun UserProfilesList(userProfiles: List<UserForProfile>, navController: NavController) {
-    LazyColumn {
-        itemsIndexed(items = userProfiles) { index, userProfile ->
-            userProfile.name?.let {
-                userProfile.bio?.let { it1 ->
-                    userProfile.photo?.let { it2 ->
-                        userProfile.uuid?.let { it3 ->
-                            UserProfileCard(
-
-                                name = it,
-                                bio = it1,
-                                imageUrl = it2,
-                                onClick = {
-                                    navController.navigate("${NavigationRoutes.USER_PROFILE}/${userProfile.uuid}")
-                                }
-                            )
-                        }
-                    }
-                }
-            }
         }
     }
 }

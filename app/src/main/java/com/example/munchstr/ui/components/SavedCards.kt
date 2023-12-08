@@ -44,8 +44,7 @@ fun SavedCards(
     )
     {
         Box(modifier = Modifier.fillMaxWidth()) {
-            UserIconAndName(author.name,author.photo, formatCreationTime
-                (creationTimeString = recipe.createdAt),
+            UserIconAndName(author.name,author.photo, creationTime = recipe.createdAt,
                 onUserIconClicked = {
                     navController.navigate("${NavigationRoutes.USER_PROFILE}/${author.uuid}")
                 }
@@ -63,7 +62,7 @@ fun SavedCards(
         ) {
             AppGlideSubcomposition(imageUri = recipe.photo)
         }
-        Column(modifier = Modifier.padding(horizontal = 20.dp)){
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)){
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,

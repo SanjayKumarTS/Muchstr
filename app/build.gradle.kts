@@ -86,11 +86,19 @@ dependencies {
     implementation("com.github.bumptech.glide:compose:1.0.0-beta01")
     ksp("com.github.bumptech.glide:ksp:4.14.2")
     implementation("com.google.android.gms:play-services-auth:20.7.0")
-    implementation("androidx.compose.material:material:1.6.0-beta01")
-    val room_version = "2.6.0"
+    implementation("androidx.compose.material:material:1.6.0-beta02")
+    val room_version = "2.6.1"
     implementation("androidx.room:room-runtime:$room_version")
     annotationProcessor("androidx.room:room-compiler:$room_version")
     kapt("androidx.room:room-compiler:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
     implementation ("com.cloudinary:cloudinary-android:2.3.1")
+    implementation ("androidx.media3:media3-exoplayer:1.2.0")
+    implementation ("androidx.media3:media3-exoplayer-dash:1.2.0")
+    implementation ("androidx.media3:media3-ui:1.2.0")
+    implementation("com.airbnb.android:lottie-compose:4.0.0")
+
+    val nav_version = "2.7.5"
+
+    implementation("androidx.navigation:navigation-compose:$nav_version")
 }

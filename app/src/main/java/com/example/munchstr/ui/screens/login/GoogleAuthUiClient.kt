@@ -33,7 +33,7 @@ class GoogleAuthUiClient(
                 BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
                     .setSupported(true)
                     .setServerClientId("398353061615-7dsv6r3fpo2pc0l3escj6hk8h52kufmn.apps.googleusercontent.com")
-                    .setFilterByAuthorizedAccounts(true)
+                    .setFilterByAuthorizedAccounts(false)
                     .build()
             )
             .build()

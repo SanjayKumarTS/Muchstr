@@ -9,7 +9,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.Snackbar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
@@ -31,6 +34,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,13 +54,22 @@ import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.example.munchstr.R
 import com.example.munchstr.model.ResponseFindRecipesForUserDTO
+import com.example.munchstr.ui.components.AnimatedPreloader
 import com.example.munchstr.ui.components.AppCard
 import com.example.munchstr.ui.components.AppGlideSubcomposition
+import com.example.munchstr.ui.components.RecipePostedAnimation
 import com.example.munchstr.ui.navigation.NavigationRoutes
 import com.example.munchstr.viewModel.RecipeViewModel
 import com.example.munchstr.viewModel.SignInViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class,
     ExperimentalFoundationApi::class
@@ -79,7 +96,38 @@ fun HomePage(
             recipeViewModel.loadRecipesForUser(
                 it.uuid)
         } })
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { snackbarData ->
+                Snackbar(
+                    action = {
+                        snackbarData.visuals.actionLabel?.let { actionLabel ->
+                            TextButton(onClick = { snackbarData.performAction() }) {
+                                Text(actionLabel)
+                            }
+                        }
+                        recipeViewModel.resetRecipePosted()
+                    },
+                    backgroundColor = MaterialTheme.colorScheme.surface.copy
+                        (alpha = 0.98f),
+                    modifier = Modifier.height(80.dp).width(200.dp),
+                    elevation = 10.dp
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.background(Color.Transparent)
+                    ) {
+                        Text(text = snackbarData.visuals.message, style =
+                        MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.width(2.dp))
+                        RecipePostedAnimation()
+                    }
+                }
+
+            }
+        },
         topBar = {
             TopAppBar(
                 title = {
@@ -88,8 +136,9 @@ fun HomePage(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable
-                            .munchstr),
+                            painter = painterResource(
+                                id = R.drawable.munchstr
+                            ),
                             contentDescription = ""
                         )
                         Box(modifier = Modifier.padding(20.dp)) {
@@ -135,71 +184,94 @@ fun HomePage(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
-                                           navController.navigate(NavigationRoutes.Add_RECIPE)
+                navController.navigate(NavigationRoutes.Add_RECIPE)
             }, containerColor =
             MaterialTheme.colorScheme.primary) {
-            Icon(
-                imageVector = Icons.Filled.Add,
-                contentDescription = "",
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "",
 
-            )
-        }
-                               },
+                    )
+            }
+        },
         containerColor = MaterialTheme.colorScheme.background
     ) {
+
         Column(
             modifier = Modifier
                 .padding(it)
                 .fillMaxSize()
         ) {
+            if(recipeViewModel.recipePosted.value){
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = "Recipe Posted",
+                        duration = SnackbarDuration.Short
+                    )
+                    delay(700)
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                }
+            }
+            Box {
+                if(recipeViewModel.isRefreshing.value){
+                    AnimatedPreloader()
+                }
+            }
             Box(modifier = Modifier
                 .pullRefresh(ptrState)
                 .fillMaxSize()) {
-            LazyColumn(
-                content = {
-                    items(
-                        items = recipes,
-                        key = {item: ResponseFindRecipesForUserDTO ->  item.uuid}
-                    ) { recipe ->
-                        recipe.userLiked?.let { it1 ->
-                            AppCard(
-                                author = recipe.author,
-                                recipe = recipe.recipe,
-                                likesCount = recipe.likesCount,
-                                commentsCount = recipe.commentsCount,
-                                creationTime = recipe.recipe.creationTime,
-                                isLiked = it1,
-                                onLikeClicked = {
-                                    // Handle like button click here
-                                    // For example, update the like status in the view model
-                                    userInfo?.let { it1 -> recipeViewModel.addLike(recipe.uuid, it1.uuid) }
-                                },
-                                onClick = {
-                                    recipeViewModel.updateSelectedRecipeAuthor(recipe.author)
-                                    handleCardClick(
-                                        navController,
-                                        recipeId = recipe.uuid,
-                                        likesCount = recipe.likesCount,
-                                        commentsCount = recipe.commentsCount,
+                LazyColumn(
+                    content = {
+                        items(
+                            items = recipes,
+                            key = {item: ResponseFindRecipesForUserDTO ->  item.uuid}
+                        ) { recipe ->
+                            recipe.userLiked?.let { it1 ->
+                                AppCard(
+                                    author = recipe.author,
+                                    recipe = recipe.recipe,
+                                    uuid=recipe.uuid,
+                                    recipeViewModel=recipeViewModel,
+                                    creationTime = recipe.recipe.creationTime,
+                                    isLiked = it1,
+                                    onLikeClicked = { isLiked->
+                                        userInfo?.let { userInfo ->
+                                            if (isLiked) {
+                                                recipeViewModel.addLike(recipe.uuid, userInfo.uuid)
+
+                                            } else {
+                                                recipeViewModel.removeLike(recipe.uuid, userInfo.uuid)
+
+                                            }
+                                        }
+                                    },
+
+                                    onClick = {
+                                        recipeViewModel.updateSelectedRecipeAuthor(recipe.author)
+                                        handleCardClick(
+                                            navController,
+                                            recipeId = recipe.uuid,
+                                            likesCount = recipe.likesCount,
+                                            commentsCount = recipe.commentsCount,
+                                        )
+                                    },
+                                    navController = navController,
+                                    modifier = Modifier.animateItemPlacement
+                                        (animationSpec = tween(durationMillis =
+                                    600)
                                     )
-                                },
-                                navController = navController,
-                                modifier = Modifier.animateItemPlacement
-                                    (animationSpec = tween(durationMillis =
-                                600)
                                 )
-                            )
+                            }
                         }
                     }
-                }
-            )
-            PullRefreshIndicator(
-                recipeViewModel.isRefreshing.value, ptrState,
-                Modifier.align(Alignment.TopCenter)
-            )
+                )
+                PullRefreshIndicator(
+                    recipeViewModel.isRefreshing.value, ptrState,
+                    Modifier.align(Alignment.TopCenter)
+                )
+            }
         }
     }
-        }
 }
 
 fun handleCardClick(

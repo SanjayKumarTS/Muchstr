@@ -27,6 +27,10 @@ class RecipeRepositoryImpl(private val recipeDao: RecipeDao) : RecipeRepository 
             }
         }
     }
+
+    override suspend fun getRecipeByUuid(uuid: String): Recipe {
+        return recipeDao.getRecipeByUuid(uuid = uuid)
+    }
     override suspend fun insertRecipe(recipe: Recipe) {
         recipeDao.insertRecipe(RecipeEntity(
             name = recipe.name,

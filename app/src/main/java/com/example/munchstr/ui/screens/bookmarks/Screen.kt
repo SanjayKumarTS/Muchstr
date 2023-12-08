@@ -6,6 +6,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,7 +31,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.example.munchstr.R
 import com.example.munchstr.model.Recipe
@@ -55,15 +55,8 @@ fun Bookmarks(navController: NavHostController, recipeViewModel: RecipeViewModel
         topBar = {
             TopAppBar(
                 title = {
-                    BoxWithConstraints(modifier = Modifier.fillMaxWidth(),
+                    Box(modifier = Modifier.fillMaxWidth(),
                     ) {
-                        val dynamicSize =
-                            with(LocalDensity.current) {   if (constraints.maxWidth.toDp() > 600.dp) {
-                                0.05f * constraints.maxWidth.toDp()
-                            } else {
-                                0.1f * constraints.maxWidth.toDp()
-                            }}
-
                         Row(horizontalArrangement = Arrangement.Start) {
                             Image(
                                 painter = painterResource(
@@ -71,7 +64,6 @@ fun Bookmarks(navController: NavHostController, recipeViewModel: RecipeViewModel
                                         .bookmarks
                                 ),
                                 contentDescription = "",
-                                modifier = Modifier.size(dynamicSize)
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
@@ -110,7 +102,9 @@ fun Bookmarks(navController: NavHostController, recipeViewModel: RecipeViewModel
                                 },
                                 onDelete = {
                                     println("OnDelete")
-                                    recipeViewModel.deleteRecipeFromDatabase(uuid = recipe.uuid)
+                                    recipeViewModel.deleteRecipeFromDatabase(
+                                        uuid = recipe.uuid,
+                                    )
                                 },
                                 modifier = Modifier.animateItemPlacement
                                     (animationSpec = tween(durationMillis =

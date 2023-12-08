@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -32,12 +34,14 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.munchstr.model.Ingredient
 import com.example.munchstr.model.Nutrition
+import com.example.munchstr.model.PostComment
 import com.example.munchstr.ui.components.AppCheckBox
 import com.example.munchstr.ui.components.AppGlideSubcomposition
 import com.example.munchstr.ui.components.AppNumberingList
@@ -66,6 +71,7 @@ import com.example.munchstr.ui.components.SaveButton
 import com.example.munchstr.ui.components.Sharebutton
 import com.example.munchstr.ui.components.UserIconAndName
 import com.example.munchstr.ui.navigation.NavigationRoutes
+import com.example.munchstr.utils.ConnectivityObserver
 import com.example.munchstr.viewModel.CommentViewModel
 import com.example.munchstr.viewModel.RecipeViewModel
 import com.example.munchstr.viewModel.SignInViewModel
@@ -86,12 +92,26 @@ fun RecipeDetails(
 
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
+    val networkStatus by signInViewModel.networkStatus.collectAsState()
     LaunchedEffect(Unit){
-        recipeViewModel.loadSingleRecipe(recipeId)
+        if(networkStatus == ConnectivityObserver.Status.Unavailable ||
+            networkStatus == ConnectivityObserver.Status.Lost){
+            recipeViewModel.getSingleRecipeFromSavedRecipes(recipeId)
+                recipeViewModel.selectedRecipe.value?.let {
+                    recipeViewModel.getSingleAuthorFromSavedAuthors(
+                        it.authorId)
+                }
+        }
+        else{
+            recipeViewModel.loadSingleRecipe(recipeId)
+            recipeViewModel.getlikes(recipeId)
+        }
     }
-
     val recipe = recipeViewModel.selectedRecipe.value
     val author = recipeViewModel.selectedRecipeAuthor.value
+    Log.d("Recipe Details Screen", "Network Status: $networkStatus")
+    Log.d("Recipe Details Screen", "Recipe: $recipe")
+    Log.d("Recipe Details Screen", "Author: $author")
     val comments = commentViewModel.comments
     val userInfo = signInViewModel.userData
     val savedRecipes by recipeViewModel.savedRecipesFlow.collectAsState(initial = emptyList())
@@ -103,6 +123,16 @@ fun RecipeDetails(
 
     isRecipeSaved = savedRecipes.any { it.uuid == selectedRecipeUuid }
     val isAuthorSaved = savedAuthors.any { it.uuid == selectedRecipeAuthorId }
+
+
+    val allLikesComments = recipeViewModel.allLikesResponse.collectAsState()
+
+    val specificLikesComments = allLikesComments.value.firstOrNull { it.recipeId == selectedRecipeUuid }
+    val likesCount = specificLikesComments?.likes?.size ?: 0
+    val commentsCount = specificLikesComments?.comments?.size ?: 0
+    var Liked by remember{mutableStateOf(isLiked) }
+    Liked = specificLikesComments?.likes?.contains(userInfo.value?.uuid) == true
+
 
     val ptrState=
         rememberPullRefreshState(recipeViewModel.isRefreshing.value, {recipeViewModel.loadSingleRecipe(recipeId)})
@@ -246,11 +276,14 @@ fun RecipeDetails(
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 LikeButton(
                                     tint = Color.Unspecified,
-                                    liked = isLiked,
+                                    liked = Liked,
                                     onClick = {
-                                        userInfo.value?.let { it1 ->
-                                            recipeViewModel.addLike(recipeId,
-                                                it1.uuid)
+                                        userInfo.value?.let { userInfo ->
+                                            if (Liked) {
+                                                recipeViewModel.removeLike(recipeId, userInfo.uuid)
+                                            } else {
+                                                recipeViewModel.addLike(recipeId, userInfo.uuid)
+                                            }
                                         }
                                     }
                                 )
@@ -267,7 +300,9 @@ fun RecipeDetails(
                                         commentViewModel.updateComments(recipeId = recipeId)
                                     }
                                 })
-                            Sharebutton(content = "")
+                            if (recipe != null) {
+                                Sharebutton(recipe = recipe)
+                            }
                         }
                         SaveButton(
                             isRecipeSaved = isRecipeSaved,
@@ -312,6 +347,7 @@ fun RecipeDetails(
                             RecipeNutritionalFacts(facts = recipe.nutrition)
                         }
                     }
+
                     if (showBottomSheet) {
                         ModalBottomSheet(
                             onDismissRequest = {
@@ -320,24 +356,43 @@ fun RecipeDetails(
                             sheetState = sheetState,
                             modifier = Modifier.fillMaxHeight()
                         ) {
-                            if(comments.isNotEmpty()){
-                                comments.forEachIndexed { index, comment ->
-                                    CommentCard(comment)
-                                    if (index < comments.size - 1) {
-                                        HorizontalDivider()
+                            Column {
+
+                                if (comments.isNotEmpty()) {
+                                    comments.forEachIndexed { index, comment ->
+                                        CommentCard(comment)
+                                        if (index < comments.size - 1) {
+                                            HorizontalDivider()
+                                        }
+                                    }
+                                } else {
+                                    Box(
+                                        modifier = Modifier.padding(10.dp),
+                                        contentAlignment = Alignment.TopCenter
+                                    ) {
+                                        Text(text = "No Comments")
                                     }
                                 }
-                            }
-                            else{
-                                Box(
-                                    modifier = Modifier.padding(10.dp),
-                                    contentAlignment = Alignment.TopCenter
-                                ) {
-                                    Text(text = "No Comments")
-                                }
+
+                                CommentInput(onCommentSubmit = { commentText ->
+                                    val postCommentData = userInfo.value?.uuid?.let { it1 ->
+                                        PostComment(
+                                            recipeId,
+                                            it1,
+                                            commentText
+                                        )
+                                    }
+
+                                    if (postCommentData != null) {
+                                        commentViewModel.postComment(postCommentData)
+                                    }
+                                })
+
                             }
                         }
                     }
+
+
                 }
             }
         }
@@ -383,7 +438,7 @@ fun RecipeIngredients(ingredients: List<Ingredient>) {
 }
 
 @Composable
-fun RecipeInstructions(instructions: List<String>){
+fun RecipeInstructions(instructions: List<String>) {
     Column(modifier = Modifier.padding(5.dp)) {
         Text(
             text = "Instructions",
@@ -393,11 +448,17 @@ fun RecipeInstructions(instructions: List<String>){
         )
         Column {
             instructions.forEachIndexed { index, instruction ->
-                AppNumberingList(listNumber = index + 1, text = instruction)
+                AppNumberingList(
+                    listNumber = index + 1,
+                    text = instruction.replaceFirstChar {
+                        if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                    }
+                )
             }
         }
     }
 }
+
 
 @Composable
 fun RecipeNutritionalFacts(facts: List<Nutrition>){
@@ -462,6 +523,35 @@ fun NutrientLabel(nutrientName: String, amount: String) {
                     fontWeight = FontWeight.SemiBold
                 )
             }
+        }
+    }
+}
+@Composable
+fun CommentInput(onCommentSubmit: (String) -> Unit) {
+
+    var commentText by remember { mutableStateOf("") }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(8.dp)
+    ) {
+        TextField(
+            value = commentText,
+            onValueChange = { commentText = it },
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 8.dp),
+            placeholder = { Text("Add a comment...") }
+        )
+        Button(
+            onClick = {
+                if (commentText.isNotBlank()) {
+                    onCommentSubmit(commentText)
+                    commentText = ""
+                }
+            }
+        ) {
+            Text("Post")
         }
     }
 }

@@ -1,12 +1,16 @@
 package com.example.munchstr.di.modules
 
+import android.content.Context
 import com.example.munchstr.network.AuthApiService
 import com.example.munchstr.network.CommentApiService
 import com.example.munchstr.network.FollowersAndFollowingApiService
 import com.example.munchstr.network.RecipeApiService
+import com.example.munchstr.utils.ConnectivityObserver
+import com.example.munchstr.utils.NetworkConnectivityObserver
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -42,8 +46,7 @@ object NetworkModule {
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
 //            .baseUrl("https://munchstr-backend-nestjs.cyclic.app/")
-            .baseUrl("https://a595-2603-7081-47f0-74b0-80cb-b265-be40-a571" +
-                    ".ngrok-free.app/")
+            .baseUrl("https://0f04-128-230-137-244.ngrok-free.app/")
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -72,5 +75,11 @@ object NetworkModule {
     fun provideCommentApiServiceApiService(retrofit: Retrofit)
             : CommentApiService {
         return retrofit.create(CommentApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideConnectivityObserver(@ApplicationContext context: Context): ConnectivityObserver {
+        return NetworkConnectivityObserver(context)
     }
 }

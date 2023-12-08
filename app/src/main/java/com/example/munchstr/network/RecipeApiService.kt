@@ -1,12 +1,16 @@
 package com.example.munchstr.network
 
 import com.example.munchstr.model.CreateLikeDto
+import com.example.munchstr.model.GetAllLikeCommentResponse
+import com.example.munchstr.model.LikeCommentResponse
 import com.example.munchstr.model.PostRecipe
 import com.example.munchstr.model.RecipeResponse
 import com.example.munchstr.model.ResponseFindRecipesForUserDTO
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.HTTP
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -57,4 +61,16 @@ interface RecipeApiService {
     @GET("recipe/searchRecipeByCategory/{name}")
     suspend fun searchRecipeByCategory(@Path("name") name: String): Response<List<ResponseFindRecipesForUserDTO>>
 
+    @HTTP(method = "DELETE", path = "like-comment/like", hasBody = true)
+    suspend fun removeLike(
+        @Body createLikeDto: CreateLikeDto
+    ): Response<Any>
+    @GET("like-comment/liked/{recipeId}")
+    suspend fun getLikes(
+        @Path("recipeId") recipeId: String
+    ): Response<LikeCommentResponse>
+    @GET("like-comment/likes")
+    suspend fun getAllLikes(): Response<List<GetAllLikeCommentResponse>>
+    @DELETE("recipe/{id}")
+    suspend fun deleteRecipe(@Path("id") recipeId: String): Response<Unit>
 }

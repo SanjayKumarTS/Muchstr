@@ -6,8 +6,10 @@ import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.munchstr.model.Author
@@ -23,6 +25,7 @@ import com.example.munchstr.network.AuthApiService
 import com.example.munchstr.network.FollowersAndFollowingApiService
 import com.example.munchstr.sharedPreferences.UserRepository
 import com.example.munchstr.ui.screens.login.GoogleAuthUiClient
+import com.example.munchstr.utils.ConnectivityObserver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,7 +39,9 @@ class SignInViewModel @Inject constructor(
     private val googleAuthUiClient: GoogleAuthUiClient,
     private val authApiService: AuthApiService,
     private val userRepository: UserRepository,
-    private val followersAndFollowingApiService: FollowersAndFollowingApiService
+    private val followersAndFollowingApiService:
+    FollowersAndFollowingApiService,
+    private val connectivityObserver: ConnectivityObserver
 ) : ViewModel() {
     private val _state = MutableStateFlow(SignInState())
     val state: StateFlow<SignInState> = _state.asStateFlow()
@@ -59,6 +64,19 @@ class SignInViewModel @Inject constructor(
     private val _followersFollowing = mutableStateOf<FollowersAndFollowing?>(null)
     val followersFollowing:State<FollowersAndFollowing?> = _followersFollowing
 
+    private val _networkStatus = MutableStateFlow(ConnectivityObserver.Status.Unavailable)
+    val networkStatus: StateFlow<ConnectivityObserver.Status> = _networkStatus.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            connectivityObserver.observe().collect { status ->
+                _networkStatus.value = status
+            }
+        }
+    }
+    fun clearSearchUserData(){
+        _searchUserData.clear()
+    }
     fun loadFollowersFollowing(uuid:String){
         Log.i("loadSelectedUserData", "$uuid")
         viewModelScope.launch{

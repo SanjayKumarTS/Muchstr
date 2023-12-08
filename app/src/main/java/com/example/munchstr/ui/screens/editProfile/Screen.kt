@@ -11,10 +11,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,6 +49,7 @@ import androidx.navigation.NavController
 import com.example.munchstr.model.User
 import com.example.munchstr.model.UserDTO
 import com.example.munchstr.model.UserForProfile
+import com.example.munchstr.ui.components.AnimatedPreloader
 import com.example.munchstr.ui.components.AppGlideSubcomposition
 import com.example.munchstr.ui.navigation.NavigationRoutes
 import com.example.munchstr.viewModel.SignInViewModel
@@ -76,7 +80,7 @@ fun EditProfile(
         signInViewModel, userInfo = userInfo!!,selectedUser
         )
     } else {
-        CircularProgressIndicator()
+        AnimatedPreloader()
     }
 }
 
@@ -87,14 +91,10 @@ fun EditProfileContent(
     signInViewModel: SignInViewModel, userInfo: User, selectedUser: UserForProfile?
 ) {
 
-
-
     var name by remember { mutableStateOf(selectedUser?.name?.let { TextFieldValue(it) }) }
     var isNameEditable by remember { mutableStateOf(false) }
     var bio by remember { mutableStateOf(selectedUser?.bio ?: "") }
     var isBioEditable by remember { mutableStateOf(false) }
-
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -126,7 +126,11 @@ fun EditProfileContent(
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) {
-        Column(modifier = Modifier.padding(it)) {
+        Column(
+            modifier = Modifier
+                .padding(it)
+                .verticalScroll(rememberScrollState())
+        ) {
             Box(modifier = Modifier
                 .height(300.dp)
                 .background(
@@ -191,20 +195,24 @@ fun EditProfileContent(
                             .clickable {
                                 isNameEditable = !isNameEditable
                                 if (!isNameEditable) {
-                                    val updatedUserDto = userInfo.photoURL?.let { it1 ->
-                                        selectedUser?.bio?.let { it2 ->
-                                            name?.let { it3 ->
-                                                UserDTO(
-                                                    name = it3.text,
-                                                    photo = it1,
-                                                    uuid = userInfo.uuid,
-                                                    bio = it2
-                                                )
+                                    val updatedUserDto =
+                                        userInfo.photoURL?.let { it1 ->
+                                            selectedUser?.bio?.let { it2 ->
+                                                name?.let { it3 ->
+                                                    UserDTO(
+                                                        name = it3.text,
+                                                        photo = it1,
+                                                        uuid = userInfo.uuid,
+                                                        bio = it2
+                                                    )
+                                                }
                                             }
                                         }
-                                    }
                                     if (updatedUserDto != null) {
-                                        signInViewModel.updateUserData(userInfo.uuid, updatedUserDto)
+                                        signInViewModel.updateUserData(
+                                            userInfo.uuid,
+                                            updatedUserDto
+                                        )
                                     }
                                 }
                             }
@@ -220,7 +228,9 @@ fun EditProfileContent(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 10.dp)) {
+                    Column(modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 10.dp)) {
                         Text(
                             text = "Bio",
                             style = MaterialTheme.typography.titleMedium,
@@ -239,7 +249,7 @@ fun EditProfileContent(
                     }
 
                     Icon(
-                        imageVector = Icons.Default.KeyboardArrowRight,
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = "Edit Bio",
                         tint = Color.DarkGray,
                         modifier = Modifier
@@ -247,18 +257,22 @@ fun EditProfileContent(
                             .clickable {
                                 isBioEditable = !isBioEditable
                                 if (!isBioEditable) {
-                                    val updatedUserDto = userInfo.photoURL?.let { it1 ->
-                                        selectedUser?.name?.let { it2 ->
-                                            UserDTO(
-                                                name = it2,
-                                                photo = it1,
-                                                uuid = userInfo.uuid,
-                                                bio = bio
-                                            )
+                                    val updatedUserDto =
+                                        userInfo.photoURL?.let { it1 ->
+                                            selectedUser?.name?.let { it2 ->
+                                                UserDTO(
+                                                    name = it2,
+                                                    photo = it1,
+                                                    uuid = userInfo.uuid,
+                                                    bio = bio
+                                                )
+                                            }
                                         }
-                                    }
                                     if (updatedUserDto != null) {
-                                        signInViewModel.updateUserData(userInfo.uuid, updatedUserDto)
+                                        signInViewModel.updateUserData(
+                                            userInfo.uuid,
+                                            updatedUserDto
+                                        )
                                     }
                                 }
                             }

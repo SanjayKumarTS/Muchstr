@@ -2,8 +2,10 @@ package com.example.munchstr.viewModel
 
 import android.util.Log
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -12,6 +14,8 @@ import com.example.munchstr.database.AuthorRepository
 import com.example.munchstr.database.RecipeRepository
 import com.example.munchstr.model.Author
 import com.example.munchstr.model.CreateLikeDto
+import com.example.munchstr.model.GetAllLikeCommentResponse
+import com.example.munchstr.model.LikeCommentResponse
 import com.example.munchstr.model.PostRecipe
 import com.example.munchstr.model.Recipe
 import com.example.munchstr.model.ResponseFindRecipesForUserDTO
@@ -19,16 +23,19 @@ import com.example.munchstr.network.RecipeApiService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import javax.inject.Inject
 
 @HiltViewModel
-class RecipeViewModel @Inject constructor(private val apiService: 
+class RecipeViewModel @Inject constructor(private val apiService:
                                           RecipeApiService,
                                           private val recipeRepository:
                                           RecipeRepository,
-    private val authorRepository: AuthorRepository
+                                          private val authorRepository: AuthorRepository
 ) : ViewModel() {
 
     // Use LiveData or StateFlow to hold the API response
@@ -56,11 +63,54 @@ class RecipeViewModel @Inject constructor(private val apiService:
     val savedRecipesFlow: Flow<List<Recipe>> = recipeRepository.getAllRecipes()
     val savedAuthorsFlow: Flow<List<Author>> = authorRepository.getAllAuthors()
 
+    private val _likesResponse = MutableStateFlow<LikeCommentResponse?>(null)
+    val likesResponse: StateFlow<LikeCommentResponse?> = _likesResponse.asStateFlow()
 
     private val _imageUrl = mutableStateOf<String?>(null)
     val imageUrl: State<String?> = _imageUrl
+    private val _allLikesResponse = MutableStateFlow<List<GetAllLikeCommentResponse>>(listOf())
+    val allLikesResponse: StateFlow<List<GetAllLikeCommentResponse>> = _allLikesResponse.asStateFlow()
 
     val navigateToHome = MutableStateFlow(false)
+
+
+    private val _selectedCategory = MutableStateFlow<String?>(null)
+    val selectedCategory: StateFlow<String?> = _selectedCategory
+
+    private val _selectButton = MutableStateFlow<Boolean?>(null)
+    val selectedButton: StateFlow<Boolean?> = _selectButton
+
+    private val _recipePosted = mutableStateOf(false)
+    val recipePosted: State<Boolean> = _recipePosted
+
+    fun resetRecipePosted(){
+        _recipePosted.value = false
+    }
+
+    fun selectbutton(boolean:Boolean)
+    {
+        Log.i("selectButton", boolean.toString())
+        _selectButton.value = boolean
+    }
+    fun selectCategory(category: String) {
+        _selectedCategory.value = category
+    }
+
+    private fun updateLikesForRecipe(recipeId: String, add: Boolean, userId: String) {
+        val updatedLikes = _allLikesResponse.value.toMutableList()
+        val index = updatedLikes.indexOfFirst { it.recipeId == recipeId }
+        if (index != -1) {
+            val currentLikes = updatedLikes[index].likes.toMutableList()
+            if (add) {
+                currentLikes.add(userId)
+            } else {
+                currentLikes.remove(userId)
+            }
+            updatedLikes[index] = updatedLikes[index].copy(likes = currentLikes)
+            _allLikesResponse.value = updatedLikes
+        }
+    }
+
 
     fun clearRecipesforCards(){
         _recipesForCards.clear()
@@ -89,7 +139,6 @@ class RecipeViewModel @Inject constructor(private val apiService:
             try {
                 val response = apiService.searchRecipe(name)
                 if (response.isSuccessful) {
-                    // Update the LiveData with the search results
                     _recipesForCards.clear()
                     response.body()?.let { _recipesForCards.addAll(it) }
                 } else {
@@ -103,6 +152,71 @@ class RecipeViewModel @Inject constructor(private val apiService:
         }
     }
 
+
+    fun removeLike(recipeId: String, authorId: String){
+        viewModelScope.launch{
+            try {
+                val response = apiService.removeLike(CreateLikeDto(
+                    recipeId = recipeId,
+                    userId = authorId
+                ))
+                if(response.isSuccessful){
+                    updateLikesForRecipe(recipeId, add = false, authorId)
+                    Log.i("Liked","Recipe Like removed")
+                }
+                else {
+                    val errorBody = response.errorBody()?.string()
+                    val statusCode = response.code()
+                    if (errorBody.isNullOrEmpty()) {
+                        Log.e("loadRecipes", "Error response with status code: $statusCode")
+                    } else {
+                        Log.e("loadRecipes", "Error response ($statusCode): $errorBody")
+                    }
+                }
+            }catch (e: Exception) {
+                Log.e("loadRecipes", "Exception occurred: ${e.message}", e)
+            }
+        }
+    }
+
+    fun getAllLikes(){
+        viewModelScope.launch {
+            try {
+                val response = apiService.getAllLikes()
+                if (response.isSuccessful) {
+                    _allLikesResponse.value = response.body() ?: listOf()
+                } else {
+                    _allLikesResponse.value = listOf()
+                }
+            }finally {
+                System.out.println("Finally getAllLikes Executed")
+            }
+        }
+    }
+
+    fun getlikes(RecipeId:String) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.getLikes(RecipeId)
+                if (response.isSuccessful) {
+                    Log.d("RecipeViewModel", "Response: ${response.body()}")
+                    _likesResponse.value = response.body()
+                }else {
+                    val errorBody = response.errorBody()?.string()
+                    val statusCode = response.code()
+                    if (errorBody.isNullOrEmpty()) {
+                        Log.e("postRecipe", "Error response with status code: $statusCode")
+                    } else {
+                        Log.e("postRecipe", "Error response ($statusCode): $errorBody")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("postRecipe", "Exception occurred: ${e.message}", e)
+            } finally {
+                System.out.println("Finally Executed")
+            }
+        }
+    }
     fun addLike(recipeId: String, authorId: String){
         viewModelScope.launch{
             try {
@@ -111,6 +225,8 @@ class RecipeViewModel @Inject constructor(private val apiService:
                     userId = authorId
                 ))
                 if(response.isSuccessful){
+                    updateLikesForRecipe(recipeId, add = true, authorId)
+
                     Log.i("Liked","Recipe Liked")
                 }
                 else {
@@ -183,6 +299,21 @@ class RecipeViewModel @Inject constructor(private val apiService:
         }
     }
 
+    fun getSingleRecipeFromSavedRecipes(uuid: String) {
+        Log.d("Recipe Details Screen", "getSingleRecipeFromSavedRecipes: $uuid")
+        viewModelScope.launch {
+            val recipe = recipeRepository.getRecipeByUuid(uuid)
+            _selectedRecipe.value = recipe
+            Log.d("Recipe Details Screen", "Recipe in View Model: ${_selectedRecipe.value}")
+        }
+    }
+
+    fun getSingleAuthorFromSavedAuthors(uuid: String) {
+        _selectedRecipeAuthor.value =  _savedAuthors.find { author -> author
+            .uuid ==
+                uuid }
+    }
+
     private fun checkAndDeleteRecipeFromDatabase(){
         viewModelScope.launch {
             val allRecipes = savedRecipesFlow.first()
@@ -212,6 +343,12 @@ class RecipeViewModel @Inject constructor(private val apiService:
                             .size}")
                         _recipesForCards.addAll(recipesList)
                     }
+                    else if (recipesList != null) {
+                        if(recipesList.isEmpty()){
+                            _recipesForCards.clear()
+                        }
+
+                    }
                 }
                 else {
                     // The server responded with an error
@@ -233,13 +370,17 @@ class RecipeViewModel @Inject constructor(private val apiService:
         }
     }
 
+
+
+
     fun postRecipe(newRecipe: PostRecipe) {
         viewModelScope.launch {
             try {
                 val response = apiService.createRecipe(newRecipe)
                 if (response.isSuccessful) {
                     navigateToHome.value = true
-
+                    _imageUrl.value=null
+                    _recipePosted.value = true
                     Log.i("postRecipe", "Recipe posted successfully.")
                 } else {
                     val errorBody = response.errorBody()?.string()
@@ -257,7 +398,7 @@ class RecipeViewModel @Inject constructor(private val apiService:
             }
         }
     }
-    
+
     fun loadRecipesForUser(uuid: String){
         viewModelScope.launch{
             try {
@@ -265,6 +406,7 @@ class RecipeViewModel @Inject constructor(private val apiService:
                 val response = apiService.findRecipesForUser(uuid)
                 if(response.isSuccessful){
                     val recipesList = response.body()
+                    getAllLikes()
                     if (!recipesList.isNullOrEmpty()) {
                         _recipesForCards.clear()
                         Log.d("HomePage", "Refetched List: ${recipesList.size}")
@@ -272,7 +414,6 @@ class RecipeViewModel @Inject constructor(private val apiService:
                     }
                 }
                 else {
-                    // The server responded with an error
                     val errorBody = response.errorBody()?.string()
                     val statusCode = response.code()
                     if (errorBody.isNullOrEmpty()) {
@@ -350,7 +491,41 @@ class RecipeViewModel @Inject constructor(private val apiService:
             }
         }
     }
+    fun deleteRecipeforUser(recipeId: String){
 
+        viewModelScope.launch {
+            try {
+                val response = apiService.deleteRecipe(recipeId = recipeId)
+                val requestUrl = response.raw().request.url.toString()
+                if(response.isSuccessful){
+                    val indexToDelete = _recipesForCards.indexOfFirst { it.uuid == recipeId }
+
+                    if (indexToDelete != -1) {
+                        _recipesForCards.removeAt(indexToDelete)
+                        Log.d("DeleteOperation", "Recipe with UUID $recipeId successfully deleted from the list.")
+                    }
+
+                }
+                else{
+                    val errorBody = response.errorBody()?.string()
+                    val statusCode = response.code()
+                    if (errorBody.isNullOrEmpty()) {
+                        Log.e("loadSingleRecipe", "Error response with status code: $statusCode")
+                    } else {
+                        Log.e("loadSingleRecipe", "Error response ($statusCode): $errorBody")
+                    }
+                }
+            }
+            catch (e: Exception){
+                Log.e("loadSingleRecipe", "Exception occurred: ${e.message}", e)
+            }
+            finally {
+                _isRefreshing.value = false
+            }
+        }
+
+
+    }
     fun updateSelectedRecipeAuthor(author: Author) {
         _selectedRecipeAuthor.value = author
     }

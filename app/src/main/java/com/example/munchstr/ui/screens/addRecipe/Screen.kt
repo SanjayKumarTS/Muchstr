@@ -74,6 +74,10 @@ import com.example.munchstr.model.Recipe
 import com.example.munchstr.ui.components.AppGlideSubcomposition
 import com.example.munchstr.viewModel.SignInViewModel
 import java.util.UUID
+import androidx.compose.material.RadioButton
+import androidx.compose.material.RadioButtonDefaults
+import androidx.compose.material3.TextField
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,6 +107,7 @@ NavHostController, signInViewModel: SignInViewModel){
     val context = LocalContext.current
     val categories = listOf("Breakfast", "Lunch", "Curry", "Snacks", "Desserts")
     val selectedCategories = remember { mutableStateListOf<String>() }
+    var selectedOption by remember { mutableStateOf<String?>(null) }
 
 
     var currentInstruction by remember { mutableStateOf("") }
@@ -117,7 +122,7 @@ NavHostController, signInViewModel: SignInViewModel){
     }
 
     fun validateIngredients(): Boolean {
-        return ingredients.all {
+        return ingredients.isNotEmpty() && ingredients.all {
             it.name.isNotBlank() && it.quantity.isNotBlank()
         }
     }
@@ -130,24 +135,15 @@ NavHostController, signInViewModel: SignInViewModel){
         isPrepTimeValid = recipePrepTime.isNotBlank() && recipePrepTime.toIntOrNull() != null
         isCookTimeValid = recipeCookTime.isNotBlank() && recipeCookTime.toIntOrNull() != null
 
-
-
         areIngredientsValid = validateIngredients()
+        areInstructionsValid = instructions.value.isNotEmpty() && instructions.value.any { it.isNotBlank() }
 
-        areInstructionsValid = if (instructions.value.size > 1) {
-            instructions.value.drop(1).all { it.isNotBlank() }
-        } else {
-            true
-        }
         if (imageUrl==null) {
             Toast.makeText(context, "Please add an image", Toast.LENGTH_SHORT).show()
         }
-
-
         return   isRecipeNameValid && isDescriptionValid && areInstructionsValid && isPrepTimeValid && isCookTimeValid && areIngredientsValid && imageUrl!=null
 
     }
-
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -198,7 +194,7 @@ NavHostController, signInViewModel: SignInViewModel){
                                     description = recipeDescriptionValue,
                                     ingredients = ingredients.toList(),
                                     instructions = instructions.value,
-                                    nutrition = listOf(),
+                                    nutrition = nutritionList,
                                     preparationTime = recipePrepTime.toInt(),
                                     cookTime = recipeCookTime.toInt(),
                                     photo = imageUrl ?: "",
@@ -245,12 +241,13 @@ NavHostController, signInViewModel: SignInViewModel){
                     )
             ) {
                 if (imageUrl != null) {
-                    AppGlideSubcomposition(imageUri = imageUrl, modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight())
-                }
-                else{
+                    AppGlideSubcomposition(
+                        imageUri = imageUrl, modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight()
+                    )
+                } else {
                     Image(
                         painter = painterResource(id = R.drawable.add_a_photo),
                         contentDescription = "Add Photo",
@@ -262,8 +259,12 @@ NavHostController, signInViewModel: SignInViewModel){
 
 
             }
-            Box(modifier = Modifier.padding(vertical = 10.dp, horizontal = 20
-                .dp)){
+            Box(
+                modifier = Modifier.padding(
+                    vertical = 10.dp, horizontal = 20
+                        .dp
+                )
+            ) {
                 Column {
                     Text(
                         text = "Recipe Name",
@@ -283,8 +284,12 @@ NavHostController, signInViewModel: SignInViewModel){
                     )
                 }
             }
-            Box(modifier = Modifier.padding(vertical = 10.dp, horizontal = 20
-                .dp)){
+            Box(
+                modifier = Modifier.padding(
+                    vertical = 10.dp, horizontal = 20
+                        .dp
+                )
+            ) {
                 Column {
                     Text(
                         text = "Description",
@@ -362,11 +367,12 @@ NavHostController, signInViewModel: SignInViewModel){
 
             }
 
-            Row(modifier = Modifier
-                .padding(
-                    vertical = 10.dp, horizontal = 20.dp
-                )
-                .fillMaxWidth(),
+            Row(
+                modifier = Modifier
+                    .padding(
+                        vertical = 10.dp, horizontal = 20.dp
+                    )
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
             ) {
                 Column(
@@ -452,41 +458,48 @@ NavHostController, signInViewModel: SignInViewModel){
                     )
                 }
             }
-            Box(modifier = Modifier.padding(vertical = 10.dp, horizontal = 20.dp)){
+            Box(modifier = Modifier.padding(vertical = 10.dp, horizontal = 20.dp)) {
                 Column {
-                    IngredientsList(ingredients = ingredients,  isIngredientsValid = areIngredientsValid)
+                    IngredientsList(
+                        ingredients = ingredients,
+                        isIngredientsValid = areIngredientsValid
+                    )
                 }
             }
+            val radioButtonColors = RadioButtonDefaults.colors(MaterialTheme.colorScheme.primary)
 
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Select Category", style = MaterialTheme.typography.titleMedium)
                 categories.forEach { category ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
-                            checked = selectedCategories.contains(category),
-                            onCheckedChange = { isChecked ->
-                                if (isChecked) {
-                                    selectedCategories.clear()
-                                    selectedCategories.add(category)
-                                } else {
-                                    selectedCategories.remove(category)
-                                }
-                            }
+                        RadioButton(
+                            selected = category == selectedOption,
+                            onClick = {
+                                selectedOption = category
+                                selectedCategories.clear()
+                                selectedCategories.add(category)
+                            },
+                            colors = radioButtonColors
                         )
                         Text(category)
                     }
                 }
             }
-            Box(modifier = Modifier.padding(vertical = 10.dp, horizontal = 20
-                .dp)){
+
+            Box(
+                modifier = Modifier.padding(
+                    vertical = 10.dp, horizontal = 20
+                        .dp
+                )
+            ) {
                 Column {
                     NutritionList(nutritionList)
                 }
             }
-
         }
     }
 }
+
 
 @Composable
 fun IngredientsList(ingredients: MutableList<com.example.munchstr.model.Ingredient>, isIngredientsValid: Boolean) {

@@ -36,10 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -50,6 +47,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.munchstr.R
 import com.example.munchstr.model.ResponseFindRecipesForUserDTO
 import com.example.munchstr.model.UserForProfile
+import com.example.munchstr.ui.components.AnimatedPreloader
 import com.example.munchstr.ui.components.AppCard
 import com.example.munchstr.ui.components.AppGlideSubcomposition
 import com.example.munchstr.ui.navigation.NavigationRoutes
@@ -72,8 +70,10 @@ fun UserProfile(
     val isLoading by signInViewModel.isRefreshing
 
     LaunchedEffect(selectedUserId) {
+        Log.d("UserProfileScreen","selectedUserId: $selectedUserId")
         signInViewModel.loadSelectedUserData(selectedUserId)
         recipeViewModel.loadRecipesOfUser(authorId = selectedUserId)
+        fandFViewModel.updateFollowersAndFollowing(selectedUserId)
     }
 
 
@@ -81,7 +81,7 @@ fun UserProfile(
     val recipes = recipeViewModel.recipesForCards
 
     if (isLoading) {
-        CircularProgressIndicator()
+        AnimatedPreloader()
     } else {
         selectedUser?.let { userInfo ->
             UserProfileContent(
@@ -123,7 +123,8 @@ fun UserProfileContent(
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                ProfileContent(navController = navController, userInfo = userInfo!!)
+                ProfileContent(navController = navController, userInfo =
+                userInfo!!, isCurrentUser = isCurrentUser)
                 ActionButtonsRow(navController, isCurrentUser,userInfo,FAndFViewModel,selectedUserId,signInViewModel)
             }
         }
@@ -136,16 +137,27 @@ fun UserProfileContent(
                     AppCard(
                         author = recipe.author,
                         recipe = recipe.recipe,
-                        likesCount = recipe.likesCount,
-                        commentsCount = recipe.commentsCount,
+                        uuid = recipe.uuid,
+                        recipeViewModel = recipeViewModel,
                         creationTime = recipe.recipe.creationTime,
                         isLiked = it,
-                        onLikeClicked = {
-                            if (userInfo != null) {
-                                userInfo.uuid?.let { it1 ->
-                                    recipeViewModel.addLike(recipeId = recipe.uuid,
-                                        authorId = it1
-                                    )
+                        showDelete = true,
+                        onLikeClicked = { isLiked->
+                            userInfo?.let { userInfo ->
+                                if (isLiked) {
+                                    userInfo.uuid?.let { it1 ->
+                                        recipeViewModel.addLike(recipe.uuid,
+                                            it1
+                                        )
+                                    }
+
+                                } else {
+                                    userInfo.uuid?.let { it1 ->
+                                        recipeViewModel.removeLike(recipe.uuid,
+                                            it1
+                                        )
+                                    }
+
                                 }
                             }
                         },
@@ -177,7 +189,8 @@ fun UserProfileContent(
 @Composable
 fun ProfileContent(
     userInfo: UserForProfile,
-    navController: NavController
+    navController: NavController,
+    isCurrentUser: Boolean
 )  {
     BoxWithConstraints(
         modifier = Modifier
@@ -225,26 +238,25 @@ fun ProfileContent(
                 }
 
             }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Image(
-                    painter = painterResource(id = R.drawable.bookmarks),
-                    contentDescription = "Collections",
-                    modifier = Modifier
-                        .clickable {
-                            navController.navigate(NavigationRoutes.BOOKMARKS)
-                        }
-                )
+            if(isCurrentUser){
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Image(
+                        painter = painterResource(id = R.drawable.bookmarks),
+                        contentDescription = "Collections",
+                        modifier = Modifier
+                            .clickable {
+                                navController.navigate(NavigationRoutes.BOOKMARKS)
+                            }
+                    )
 
-                Text(
-                    text = "Collections",
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center
-                )
+                    Text(
+                        text = "Collections",
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
-
         }
-
-
     }
 }
 
@@ -270,11 +282,13 @@ fun ActionButtonsRow(
     val targetId= selectedUserId
 
     Log.d("UserProfileScreen","$targetId")
-    fAndFViewModel.updateFollowersAndFollowing(targetId)
-    fAndFViewModel.followersAndFollowing.value?.following
 
+    var isFollowing by remember { mutableStateOf(fAndFViewModel
+        .followersAndFollowing.value?.followers?.any { it.uuid == userId } ==
+            true) }
 
-    var isFollowing by remember { mutableStateOf(fAndFViewModel.followersAndFollowing.value?.following?.any { it.uuid == targetId } == true) }
+    Log.d("UserProfileScreen", "Tagrget: ${fAndFViewModel
+        .followersAndFollowing.value?.followers}")
 
     val showFollowersSheet = remember { mutableStateOf(false) }
 
@@ -322,7 +336,11 @@ fun ActionButtonsRow(
         Spacer(modifier = Modifier.weight(0.2f))
 
         if(!isCurrentUser){
-            val buttonText = if (isFollowing) "Unfollow" else "Follow"
+            Log.d("UserProfileScreen","$isFollowing")
+            val buttonText = when (isFollowing) {
+                true -> "Unfollow"
+                false -> "Follow"
+            }
 
             ActionButtonColumn(buttonText = buttonText, count =null,
                 onClickAction = {
@@ -479,13 +497,6 @@ fun FollowingCard(follow: UserForProfile) {
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             }
-            if (follow.bio != null) {
-                Text(
-                    text = follow.bio,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
         }
     }
 }
@@ -548,15 +559,16 @@ fun ActionButtonColumn(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun ProfileContentPreview(){
-    ProfileContent(navController = rememberNavController() , userInfo = UserForProfile(
-        uuid = "123",
-        bio = "This bio is short and to the point, but it also conveys the " +
-                "blogger's passion for food and cooking.",
-        name = "Sanjay",
-        photo = "https://lh3.googleusercontent.com/a/ACg8ocL6XmFlx179WwRBsXyuG7N3-8sMmyKUwVor3fgDuhCfUQ=s96-c"
-        )
-    )
-}
+//@Preview(showBackground = true)
+//@Composable
+//fun ProfileContentPreview(){
+//    ProfileContent(
+//        userInfo = UserForProfile(
+//            uuid = "123",
+//            bio = "This bio is short and to the point, but it also conveys the " +
+//                    "blogger's passion for food and cooking.",
+//            name = "Sanjay",
+//            photo = "https://lh3.googleusercontent.com/a/ACg8ocL6XmFlx179WwRBsXyuG7N3-8sMmyKUwVor3fgDuhCfUQ=s96-c"
+//        ), navController = rememberNavController(), isCurrentUser = isCurrentUser
+//    )
+//}

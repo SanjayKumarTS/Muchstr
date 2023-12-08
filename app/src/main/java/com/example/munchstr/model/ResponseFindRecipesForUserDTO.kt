@@ -6,7 +6,7 @@ data class ResponseFindRecipesForUserDTO(
     val recipe: RecipeInCards,
     val likesCount: Int,
     val commentsCount: Int,
-    val userLiked: Boolean?=false
+    var userLiked: Boolean?=false
 )
 
 data class Author(
@@ -20,5 +20,6 @@ data class RecipeInCards(
     val name: String,
     val description: String,
     val photo: String,
+    val tags: List<String>?= listOf(),
     val creationTime: String
 )
