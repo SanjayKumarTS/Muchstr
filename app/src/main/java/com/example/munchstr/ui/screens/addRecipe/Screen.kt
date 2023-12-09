@@ -392,7 +392,7 @@ NavHostController, signInViewModel: SignInViewModel){
                     )
                     Spacer(modifier = Modifier.height(5.dp))
                     Text(
-                        text = "Prep Time", style =
+                        text = "Prep Time (mins)", style =
                         MaterialTheme.typography.labelLarge
                     )
                     Spacer(modifier = Modifier.height(5.dp))
@@ -434,7 +434,7 @@ NavHostController, signInViewModel: SignInViewModel){
                     )
                     Spacer(modifier = Modifier.height(5.dp))
                     Text(
-                        text = "Cook Time", style =
+                        text = "Cook Time (mins)", style =
                         MaterialTheme.typography.labelLarge,
                         modifier = Modifier.padding()
                     )

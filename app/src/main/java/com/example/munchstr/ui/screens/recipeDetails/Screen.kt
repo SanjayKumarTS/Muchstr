@@ -72,6 +72,7 @@ import com.example.munchstr.ui.components.Sharebutton
 import com.example.munchstr.ui.components.UserIconAndName
 import com.example.munchstr.ui.navigation.NavigationRoutes
 import com.example.munchstr.utils.ConnectivityObserver
+import com.example.munchstr.utils.toTitleCase
 import com.example.munchstr.viewModel.CommentViewModel
 import com.example.munchstr.viewModel.RecipeViewModel
 import com.example.munchstr.viewModel.SignInViewModel
@@ -109,9 +110,6 @@ fun RecipeDetails(
     }
     val recipe = recipeViewModel.selectedRecipe.value
     val author = recipeViewModel.selectedRecipeAuthor.value
-    Log.d("Recipe Details Screen", "Network Status: $networkStatus")
-    Log.d("Recipe Details Screen", "Recipe: $recipe")
-    Log.d("Recipe Details Screen", "Author: $author")
     val comments = commentViewModel.comments
     val userInfo = signInViewModel.userData
     val savedRecipes by recipeViewModel.savedRecipesFlow.collectAsState(initial = emptyList())
@@ -122,8 +120,9 @@ fun RecipeDetails(
     var isRecipeSaved by remember { mutableStateOf(false) }
 
     isRecipeSaved = savedRecipes.any { it.uuid == selectedRecipeUuid }
-    val isAuthorSaved = savedAuthors.any { it.uuid == selectedRecipeAuthorId }
-
+    val isAuthorSaved = remember {
+        savedAuthors.any { it.uuid == selectedRecipeAuthorId }
+    }
 
     val allLikesComments = recipeViewModel.allLikesResponse.collectAsState()
 
@@ -314,19 +313,16 @@ fun RecipeDetails(
                                             Log.d("SaveButton", "Saving recipe and author")
                                             recipeViewModel.insertRecipeToDatabase(recipe = rcp, author = athr)
                                             isRecipeSaved = true
-
                                         }
                                     }
                                 }
                             },
                             onDelete = {
                                 Log.d("SaveButton", "onDelete triggered")
-                                if (isAuthorSaved) {
-                                    recipe?.uuid?.let { it1 ->
-                                        recipeViewModel.deleteRecipeFromDatabase(
-                                            it1
-                                        )
-                                    }
+                                recipe?.uuid?.let { it1 ->
+                                    recipeViewModel.deleteRecipeFromDatabase(
+                                        it1
+                                    )
                                     isRecipeSaved = false
                                 }
                             }
@@ -504,10 +500,10 @@ fun NutrientLabel(nutrientName: String, amount: String) {
                     .clip(RoundedCornerShape(16.dp))
             ) {
                 Text(
-                    text = nutrientName,
+                    text = nutrientName.toTitleCase(),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.padding(end = 4.dp)
+                    modifier = Modifier.padding(end = 4.dp, start = 5.dp)
                 )
             }
             Row(
@@ -520,7 +516,8 @@ fun NutrientLabel(nutrientName: String, amount: String) {
                     text = amount,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onTertiary,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(end = 5.dp)
                 )
             }
         }
@@ -533,7 +530,9 @@ fun CommentInput(onCommentSubmit: (String) -> Unit) {
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(8.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
     ) {
         TextField(
             value = commentText,

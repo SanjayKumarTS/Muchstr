@@ -1,12 +1,14 @@
 package com.example.munchstr.database
 
 import android.content.Context
+import android.util.Log
 import androidx.room.Room
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ViewModelComponent
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.concurrent.Executors
 
 @Module
 @InstallIn(ViewModelComponent::class)
@@ -17,7 +19,10 @@ object AppDatabaseModule{
         return Room.databaseBuilder(
             context,
             AppRoomDatabase::class.java, "app-database"
-        ).build()
+        ).setQueryCallback({ sqlQuery, bindArgs ->
+            Log.d("RoomLog", "SQL Query: $sqlQuery, Args: $bindArgs")
+        }, Executors.newSingleThreadExecutor())
+            .build()
     }
 
     @Provides

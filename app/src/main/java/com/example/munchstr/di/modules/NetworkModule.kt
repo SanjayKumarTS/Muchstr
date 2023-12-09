@@ -1,6 +1,7 @@
 package com.example.munchstr.di.modules
 
 import android.content.Context
+import com.example.munchstr.BuildConfig
 import com.example.munchstr.network.AuthApiService
 import com.example.munchstr.network.CommentApiService
 import com.example.munchstr.network.FollowersAndFollowingApiService
@@ -46,7 +47,7 @@ object NetworkModule {
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
 //            .baseUrl("https://munchstr-backend-nestjs.cyclic.app/")
-            .baseUrl("https://0f04-128-230-137-244.ngrok-free.app/")
+            .baseUrl(BuildConfig.BASE_URI_BACKEND)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

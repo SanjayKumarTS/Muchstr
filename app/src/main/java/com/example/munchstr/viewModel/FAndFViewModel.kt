@@ -32,7 +32,7 @@ class FAndFViewModel @Inject constructor(
                 )
                 if(response.isSuccessful){
                     Log.i("UnFollowed","Following")
-                    updateFollowersAndFollowing(uuid = userId)
+                    updateFollowersAndFollowing(uuid = targetUserId)
                 }
                 else {
                     // The server responded with an error
@@ -61,10 +61,9 @@ class FAndFViewModel @Inject constructor(
                 )
                 if(response.isSuccessful){
                     Log.i("Followed","Following")
-                    updateFollowersAndFollowing(uuid = userId)
+                    updateFollowersAndFollowing(uuid = targetUserId)
                 }
                 else {
-                    // The server responded with an error
                     val errorBody = response.errorBody()?.string()
                     val statusCode = response.code()
                     if (errorBody.isNullOrEmpty()) {
@@ -74,7 +73,6 @@ class FAndFViewModel @Inject constructor(
                     }
                 }
             }catch (e: Exception) {
-                // There was an error performing the HTTP request
                 Log.e("loadRecipes", "Exception occurred: ${e.message}", e)
             }
         }
@@ -86,15 +84,14 @@ class FAndFViewModel @Inject constructor(
         viewModelScope.launch{
             try {
                 _isRefreshing.value = true
-
                 val response = followersAndFollowingApiService
                     .getFollowersAndFollowing(uuid = uuid)
-
                 if(response.isSuccessful){
                     val followersAndFollowingData = response.body()
                     Log.d("APIResponse: ","$uuid")
                     Log.d("APIResponse", "Followers: ${response.body()?.followers}, Following: ${response.body()?.following}")
                     if(followersAndFollowingData != null){
+                        _followersAndFollowing.value = FollowersAndFollowing(followers = listOf(), following = listOf())
                         _followersAndFollowing.value = followersAndFollowingData
                     }
                 }

@@ -76,7 +76,6 @@ fun UserProfile(
         fandFViewModel.updateFollowersAndFollowing(selectedUserId)
     }
 
-
     val selectedUser by signInViewModel.selectedUserData.collectAsState()
     val recipes = recipeViewModel.recipesForCards
 
@@ -141,7 +140,7 @@ fun UserProfileContent(
                         recipeViewModel = recipeViewModel,
                         creationTime = recipe.recipe.creationTime,
                         isLiked = it,
-                        showDelete = true,
+                        showDelete = isCurrentUser,
                         onLikeClicked = { isLiked->
                             userInfo?.let { userInfo ->
                                 if (isLiked) {
@@ -274,18 +273,14 @@ fun ActionButtonsRow(
 ) {
 
     val followersCount = fAndFViewModel.followersAndFollowing.value?.followers?.size
-
     val followingCount = fAndFViewModel.followersAndFollowing.value?.following?.size
-
     val userId = signInViewModel.userData.value?.uuid
-
     val targetId= selectedUserId
-
     Log.d("UserProfileScreen","$targetId")
-
-    var isFollowing by remember { mutableStateOf(fAndFViewModel
+    var isFollowing by remember { mutableStateOf(false) }
+    isFollowing=fAndFViewModel
         .followersAndFollowing.value?.followers?.any { it.uuid == userId } ==
-            true) }
+            true
 
     Log.d("UserProfileScreen", "Tagrget: ${fAndFViewModel
         .followersAndFollowing.value?.followers}")

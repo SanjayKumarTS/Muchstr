@@ -122,6 +122,7 @@ class RecipeViewModel @Inject constructor(private val apiService:
                 val response = apiService.searchRecipeByCategory(name)
                 _recipesForCards.clear()
                 if (response.isSuccessful) {
+                    getAllLikes()
                     response.body()?.let { _recipesForCards.addAll(it) }
                 } else {
                     // Handle API error
@@ -140,6 +141,7 @@ class RecipeViewModel @Inject constructor(private val apiService:
                 val response = apiService.searchRecipe(name)
                 if (response.isSuccessful) {
                     _recipesForCards.clear()
+                    getAllLikes()
                     response.body()?.let { _recipesForCards.addAll(it) }
                 } else {
                     // Handle API error
@@ -162,6 +164,7 @@ class RecipeViewModel @Inject constructor(private val apiService:
                 ))
                 if(response.isSuccessful){
                     updateLikesForRecipe(recipeId, add = false, authorId)
+                    getAllLikes()
                     Log.i("Liked","Recipe Like removed")
                 }
                 else {
@@ -226,7 +229,7 @@ class RecipeViewModel @Inject constructor(private val apiService:
                 ))
                 if(response.isSuccessful){
                     updateLikesForRecipe(recipeId, add = true, authorId)
-
+                    getAllLikes()
                     Log.i("Liked","Recipe Liked")
                 }
                 else {

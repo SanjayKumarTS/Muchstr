@@ -1,3 +1,11 @@
+import java.util.Properties
+
+val properties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { properties.load(it) }
+}
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -29,11 +37,26 @@ android {
                 )
             }
         }
+        properties.getProperty("GOOGLE_CLIENT_ID")?.let {
+            buildConfigField("String", "GOOGLE_CLIENT_ID", "\"$it\"")
+        }
+        properties.getProperty("CLOUDINARY_CLOUD_NAME")?.let {
+            buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"$it\"")
+        }
+        properties.getProperty("CLOUDINARY_API_KEY")?.let {
+            buildConfigField("String", "CLOUDINARY_API_KEY", "\"$it\"")
+        }
+        properties.getProperty("CLOUDINARY_SECRET")?.let {
+            buildConfigField("String", "CLOUDINARY_SECRET", "\"$it\"")
+        }
+        properties.getProperty("BASE_URI_BACKEND")?.let {
+            buildConfigField("String", "BASE_URI_BACKEND", "\"$it\"")
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -49,6 +72,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.4.3"

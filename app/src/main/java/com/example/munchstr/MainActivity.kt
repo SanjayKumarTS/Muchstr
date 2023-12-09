@@ -23,9 +23,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val config: HashMap<Any?, Any?> = HashMap<Any?, Any?>().apply {
-            put("cloud_name", "dirk8k9mi")
-            put("api_key", "495826456139838")
-            put("api_secret", "H73UnPrJGMceQZ9e9pMRjIWzWoM")
+            put("cloud_name", BuildConfig.CLOUDINARY_CLOUD_NAME)
+            put("api_key", BuildConfig.CLOUDINARY_API_KEY)
+            put("api_secret", BuildConfig.CLOUDINARY_SECRET)
         }
         MediaManager.init(this, config)
         setContent {

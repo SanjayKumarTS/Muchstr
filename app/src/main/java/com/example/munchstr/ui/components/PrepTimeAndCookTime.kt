@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.munchstr.R
+import com.example.munchstr.utils.formatTimeInMinutes
 
 @Composable
 fun PrepTimeAndCookTime(prepTime: Int, cookTime: Int) {
@@ -35,7 +36,7 @@ fun PrepTimeAndCookTime(prepTime: Int, cookTime: Int) {
                 MaterialTheme.typography.labelSmall
             )
             Text(
-                text = prepTime.toString(), style =
+                text = formatTimeInMinutes(prepTime), style =
                 MaterialTheme.typography.labelSmall
             )
         }
@@ -50,15 +51,15 @@ fun PrepTimeAndCookTime(prepTime: Int, cookTime: Int) {
                         .drawable.skillet
                 ),
                 contentDescription =
-                "Prep Time",
+                "Cook Time",
                 tint = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = "Prep Time", style =
+                text = "Cook Time", style =
                 MaterialTheme.typography.labelSmall
             )
             Text(
-                text = cookTime.toString(), style =
+                text = formatTimeInMinutes(cookTime), style =
                 MaterialTheme.typography.labelSmall
             )
         }

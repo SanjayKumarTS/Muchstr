@@ -15,7 +15,6 @@ class UserRepository(private val context: Context) {
             apply()
         }
     }
-
     fun getCachedUserData(): User? {
         val sharedPref = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
         val userDataJson = sharedPref.getString("userData", null)
@@ -25,7 +24,6 @@ class UserRepository(private val context: Context) {
             null
         }
     }
-
     fun clearUserData() {
         val sharedPref = context.getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
         with(sharedPref.edit()) {
