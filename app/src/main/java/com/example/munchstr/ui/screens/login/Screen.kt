@@ -39,6 +39,7 @@ import androidx.navigation.NavHostController
 import com.example.munchstr.R
 import com.example.munchstr.ui.navigation.NavigationRoutes
 import com.example.munchstr.utils.ConnectivityObserver
+import com.example.munchstr.utils.NetworkStatusHolder
 import com.example.munchstr.viewModel.SignInViewModel
 
 @Composable
@@ -46,13 +47,25 @@ fun Login(
     signInViewModel: SignInViewModel = hiltViewModel(),
     navController: NavHostController
 ) {
+    val networkStatus by signInViewModel.networkStatus.collectAsState()
+
     LaunchedEffect(Unit) {
         val cachedUser = signInViewModel.checkCachedUserData()
         if (cachedUser != null) {
             Log.d("Login", "Cached user found, navigating to Home Route")
-            navController.navigate(NavigationRoutes.HOME_ROUTE) {
-                popUpTo(navController.graph.startDestinationId) {
-                    inclusive = true
+            if(networkStatus == ConnectivityObserver.Status.Unavailable ||
+                networkStatus == ConnectivityObserver.Status.Lost) {
+                navController.navigate(NavigationRoutes.BOOKMARKS) {
+                    popUpTo(navController.graph.startDestinationId) {
+                        inclusive = true
+                    }
+                }
+            }
+            else{
+                navController.navigate(NavigationRoutes.HOME_ROUTE) {
+                    popUpTo(navController.graph.startDestinationId) {
+                        inclusive = true
+                    }
                 }
             }
         }
@@ -64,6 +77,9 @@ fun Login(
         Log.d("Login", "ActivityResult: ${result.resultCode}")
         if (result.resultCode == Activity.RESULT_OK) {
             val data: Intent? = result.data
+            if (data != null) {
+                Log.d("Login", data.extras.toString())
+            }
             signInViewModel.onSignInResult(data)
         }
     }
@@ -124,7 +140,6 @@ fun Login(
     }
 
     val signInState = signInViewModel.state.collectAsState()
-    val networkStatus by signInViewModel.networkStatus.collectAsState()
     if (signInState.value.isSignInSuccessful) {
         LaunchedEffect(signInState.value) {
             if(networkStatus == ConnectivityObserver.Status.Unavailable ||

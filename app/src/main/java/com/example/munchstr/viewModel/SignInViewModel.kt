@@ -26,12 +26,14 @@ import com.example.munchstr.network.FollowersAndFollowingApiService
 import com.example.munchstr.sharedPreferences.UserRepository
 import com.example.munchstr.ui.screens.login.GoogleAuthUiClient
 import com.example.munchstr.utils.ConnectivityObserver
+import com.example.munchstr.utils.NetworkStatusHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.logging.LogManager
 import javax.inject.Inject
 
 @HiltViewModel
@@ -64,16 +66,8 @@ class SignInViewModel @Inject constructor(
     private val _followersFollowing = mutableStateOf<FollowersAndFollowing?>(null)
     val followersFollowing:State<FollowersAndFollowing?> = _followersFollowing
 
-    private val _networkStatus = MutableStateFlow(ConnectivityObserver.Status.Unavailable)
-    val networkStatus: StateFlow<ConnectivityObserver.Status> = _networkStatus.asStateFlow()
+    val networkStatus = NetworkStatusHolder.networkStatus
 
-    init {
-        viewModelScope.launch {
-            connectivityObserver.observe().collect { status ->
-                _networkStatus.value = status
-            }
-        }
-    }
     fun clearSearchUserData(){
         _searchUserData.clear()
     }
@@ -192,16 +186,21 @@ class SignInViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 data?.let { it ->
+                    Log.d("Login", "onSignInResult() called with: it = $it")
                     val credential = googleAuthUiClient.getSignInCredentialFromIntent(it)
                     val idToken = credential.googleIdToken
+                    Log.d("Login", "ID Token: $idToken")
                     if (idToken != null) {
                         val response = authApiService.googleSignIn(GoogleSignInToken(idToken))
+                        Log.d("Login", "Response: $response")
                         if (response.isSuccessful) {
+                            Log.d("Login",response.body().toString())
                             val userInfo: User = response.body()!!
                             _userData.value = userInfo
                             userRepository.saveUserData(userInfo)
                             _state.update { it.copy(isSignInSuccessful = true) }
                         } else {
+                            Log.d("Login", "Response =$response")
                             _state.update { it.copy(isSignInSuccessful = false, signInError = "Backend authentication failed") }
                         }
                     } else {
